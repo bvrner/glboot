@@ -1,5 +1,6 @@
-use glfw::Context;
-use glfw::WindowHint;
+// use glfw::Context;
+// use glfw::WindowHint;
+use imgui_glfw_rs::glfw::{self, Context, WindowHint};
 use std::sync::mpsc::Receiver;
 
 pub struct Window {
@@ -24,10 +25,7 @@ impl Window {
             .create_window(dimensions.0, dimensions.1, name, glfw::WindowMode::Windowed)
             .unwrap();
 
-        win.set_key_polling(true);
-        win.set_sticky_keys(true);
-        win.set_framebuffer_size_polling(true);
-
+        win.set_all_polling(true);
         Window { win, events }
     }
 
@@ -58,7 +56,7 @@ impl Window {
 
     pub fn process_events<F>(&mut self, mut callback: F)
     where
-        F: 'static + FnMut(&mut ControlFlow, glfw::WindowEvent),
+        F: FnMut(&mut ControlFlow, glfw::WindowEvent),
     {
         let mut flow = ControlFlow::Continue;
         for (_, event) in glfw::flush_messages(&self.events) {
@@ -68,5 +66,17 @@ impl Window {
         if flow == ControlFlow::Quit {
             self.win.set_should_close(true);
         }
+    }
+}
+
+impl AsRef<glfw::Window> for Window {
+    fn as_ref(&self) -> &glfw::Window {
+        &self.win
+    }
+}
+
+impl AsMut<glfw::Window> for Window {
+    fn as_mut(&mut self) -> &mut glfw::Window {
+        &mut self.win
     }
 }

@@ -11,7 +11,9 @@ use ogl::{
 use window::Window;
 
 use cgmath::Vector3;
-use glfw::{Action, Key};
+use imgui_glfw_rs::glfw::{self, Action, Key};
+use imgui_glfw_rs::imgui;
+use imgui_glfw_rs::ImguiGLFW;
 
 fn main() {
     // Create a windowed mode window and its OpenGL context
@@ -19,6 +21,16 @@ fn main() {
     // Make the window's context current
     window.make_current();
     window.load_gl();
+    unsafe {
+        gl::Enable(gl::BLEND);
+        gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+        // gl::Enable(gl::DEPTH_TEST);
+        // gl::DepthFunc(gl::LESS);
+        // gl::ClearColor(0.1, 0.1, 0.1, 1.0);
+    }
+
+    let mut imgui = imgui::Context::create();
+    let mut imgui_glfw = ImguiGLFW::new(&mut imgui, window.as_mut());
 
     let root = env!("CARGO_MANIFEST_DIR");
     let v_path = format!("{}/shadersrc/vertex.glsl", root);
@@ -36,16 +48,8 @@ fn main() {
     program.set_uniform("col", Vector3::new(0.5, 0.2, 0.7));
     // Loop until the user closes the window
     while !window.should_close() {
-        window.process_events(|flow: &mut window::ControlFlow, event| match event {
-            glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                *flow = window::ControlFlow::Quit;
-            }
-            glfw::WindowEvent::FramebufferSize(w, h) => unsafe { gl::Viewport(0, 0, w, h) },
-            _ => {}
-        });
-
         unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
             program.bind();
             program.send_uniforms();
@@ -54,6 +58,20 @@ fn main() {
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
         }
 
+        let ui = imgui_glfw.frame(window.as_mut(), &mut imgui);
+        ui.show_demo_window(&mut true);
+        imgui_glfw.draw(ui, window.as_mut());
+
         window.update();
+        window.process_events(|flow: &mut window::ControlFlow, event| {
+            imgui_glfw.handle_event(&mut imgui, &event);
+            match event {
+                glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
+                    *flow = window::ControlFlow::Quit;
+                }
+                glfw::WindowEvent::FramebufferSize(w, h) => unsafe { gl::Viewport(0, 0, w, h) },
+                _ => {}
+            }
+        });
     }
 }

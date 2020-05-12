@@ -25,6 +25,8 @@ impl Layout {
             ty,
             size: size as u32,
         });
+
+        self.stride += size as i32 * count;
     }
 }
 

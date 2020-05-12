@@ -12,6 +12,7 @@ pub struct ShaderProgram(GLuint, HashMap<GLint, Uniform>);
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Uniform {
     Float(f32),
+    Int(i32),
     Vec3(Vector3<f32>),
     Vec4(Vector4<f32>),
     Vec2(Vector2<f32>),
@@ -92,6 +93,7 @@ impl ShaderProgram {
         for (location, uniform) in self.1.iter() {
             match uniform {
                 Uniform::Float(f) => unsafe { gl::Uniform1f(*location, *f) },
+                Uniform::Int(i) => unsafe { gl::Uniform1i(*location, *i) },
                 Uniform::Vec2(v) => unsafe { gl::Uniform2fv(*location, 1, v.as_ptr()) },
                 Uniform::Vec3(v) => unsafe { gl::Uniform3fv(*location, 1, v.as_ptr()) },
                 Uniform::Vec4(v) => unsafe { gl::Uniform4fv(*location, 1, v.as_ptr()) },
@@ -157,6 +159,7 @@ macro_rules! impl_into_uni {
 }
 
 impl_into_uni!(f32, Uniform::Float);
+impl_into_uni!(i32, Uniform::Int);
 impl_into_uni!(Vector2<f32>, Uniform::Vec2);
 impl_into_uni!(Vector3<f32>, Uniform::Vec3);
 impl_into_uni!(Vector4<f32>, Uniform::Vec4);

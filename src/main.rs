@@ -9,6 +9,7 @@ use ogl::{
         vertex::VertexBuffer,
     },
     program::ShaderProgram,
+    texture::Texture,
 };
 use window::Window;
 
@@ -18,9 +19,13 @@ use imgui;
 use ui::ImguiGLFW;
 
 fn main() {
-    // Create a windowed mode window and its OpenGL context
+    // shader and texture paths
+    let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
+    let v_path = format!("{}/shaders/vertex.glsl", root);
+    let f_path = format!("{}/shaders/frag.glsl", root);
+    let t_path = format!("{}/textures/wall.jpg", root);
+
     let mut window = Window::new("Bootstrap", (800, 600));
-    // Make the window's context current
     window.make_current();
     window.load_gl();
     unsafe {
@@ -32,21 +37,21 @@ fn main() {
     }
 
     let mut imgui = imgui::Context::create();
+    imgui.set_ini_filename(None);
     let mut imgui_glfw = ImguiGLFW::new(&mut imgui, &mut window);
 
-    let root = env!("CARGO_MANIFEST_DIR");
-    let v_path = format!("{}/shadersrc/vertex.glsl", root);
-    let f_path = format!("{}/shadersrc/frag.glsl", root);
     let mut program = ShaderProgram::from_files(v_path, f_path, None).unwrap();
+    let texture = Texture::new(t_path).unwrap();
 
     let vertices = [
-        -0.5, 0.5, 0.0, -0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.5, 0.5, 0.0,
+        -0.5, 0.5, 0.0, 0.0, 1.0, -0.5, -0.5, 0.0, 0.0, 0.0, 0.5, -0.5, 0.0, 1.0, 0.0, 0.5, 0.5,
+        0.0, 1.0, 1.0,
     ];
     let indices = [0, 1, 2, 0, 3, 2];
     let vao = VertexArray::new();
     let vbo = VertexBuffer::new::<f32>(&vertices);
     let ibo = IndexBuffer::new::<u8>(&indices);
-    let layout = layout![(3, f32, gl::FLOAT)];
+    let layout = layout![(3, f32, gl::FLOAT), (2, f32, gl::FLOAT)];
 
     vao.add_buffer(&vbo, &layout);
 
@@ -55,12 +60,14 @@ fn main() {
     let mut clicked = false;
     let mut mode = gl::FILL;
 
+    program.set_uniform("tex", 0);
     while !window.should_close() {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::PolygonMode(gl::FRONT_AND_BACK, mode);
         }
 
+        texture.bind(0);
         program.bind();
         program.set_uniform("col", Vector3::from(colors));
         program.send_uniforms();

@@ -1,5 +1,5 @@
 use super::shaders::{Shader, ShaderError, ShaderKind};
-use std::{collections::HashMap, ffi::CString, io::Read, ops::Drop, path::Path, ptr};
+use std::{collections::HashMap, ffi::CString, io::Read, path::Path, ptr};
 
 use gl::types::*;
 
@@ -73,10 +73,12 @@ impl ShaderProgram {
         }
     }
 
+    #[inline]
     pub fn bind(&self) {
         unsafe { gl::UseProgram(self.0) };
     }
 
+    #[inline]
     pub fn unbind(&self) {
         unsafe { gl::UseProgram(0) };
     }

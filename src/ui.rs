@@ -1,6 +1,7 @@
 // This is just the imgui-glfw-rs crate, but with updated dependencies and some bug fixes
 // Enough of a problem to be a pain for me, but not enough to justify a fork, so I just copied the file here
 
+// NOTICE
 // Original work: Copyright (c) 2019 Stephan Schauerte
 // URL: https://github.com/K4ugummi/imgui-glfw-rs
 //

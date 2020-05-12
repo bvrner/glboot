@@ -44,14 +44,14 @@ fn main() {
     let layout = layout![(3, f32, gl::FLOAT)];
 
     vao.add_buffer(&vbo, &layout);
-
-    program.set_uniform("col", Vector3::new(0.5, 0.2, 0.7));
+    let mut colors: [f32; 3] = [1.0, 1.0, 1.0];
     // Loop until the user closes the window
     while !window.should_close() {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
             program.bind();
+            program.set_uniform("col", Vector3::from(colors));
             program.send_uniforms();
             vao.bind();
 
@@ -59,7 +59,20 @@ fn main() {
         }
 
         let ui = imgui_glfw.frame(window.as_mut(), &mut imgui);
-        ui.show_demo_window(&mut true);
+
+        imgui::Window::new(&ui, imgui::im_str!("Playground"))
+            .size([300.0, 300.0], imgui::Condition::Once)
+            .build(|| {
+                if ui.collapsing_header(imgui::im_str!("Color")).build() {
+                    ui.color_picker(
+                        imgui::im_str!("Pick a Color"),
+                        imgui::EditableColor::Float3(&mut colors),
+                    )
+                    .alpha(false)
+                    .rgb(true)
+                    .build();
+                }
+            });
         imgui_glfw.draw(ui, window.as_mut());
 
         window.update();

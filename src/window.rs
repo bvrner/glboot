@@ -1,7 +1,11 @@
 // use glfw::Context;
 // use glfw::WindowHint;
-use imgui_glfw_rs::glfw::{self, Context, WindowHint};
-use std::sync::mpsc::Receiver;
+use glfw::WindowHint;
+use std::{
+    cell::Cell,
+    ops::{Deref, DerefMut},
+    sync::mpsc::Receiver,
+};
 
 pub struct Window {
     win: glfw::Window,
@@ -16,8 +20,12 @@ pub enum ControlFlow {
 
 impl Window {
     pub fn new(name: &str, dimensions: (u32, u32)) -> Self {
+        // let mut glfw = glfw::init(Some(glfw::Callback {
+        //     f: error_callback,
+        //     data: Cell::new(0),
+        // }))
+        // .unwrap();
         let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-
         glfw.window_hint(WindowHint::ContextVersion(3, 3));
         glfw.window_hint(WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
 
@@ -26,22 +34,8 @@ impl Window {
             .unwrap();
 
         win.set_all_polling(true);
+        win.set_sticky_keys(true);
         Window { win, events }
-    }
-
-    #[inline]
-    pub fn make_current(&mut self) {
-        self.win.make_current();
-    }
-
-    #[inline]
-    pub fn should_close(&self) -> bool {
-        self.win.should_close()
-    }
-
-    #[inline]
-    pub fn swap_buffers(&mut self) {
-        self.win.swap_buffers();
     }
 
     #[inline]
@@ -49,34 +43,38 @@ impl Window {
         gl::load_with(|s| self.win.get_proc_address(s) as *const _);
     }
 
-    pub fn update(&mut self) {
-        self.swap_buffers();
-        self.win.glfw.poll_events();
-    }
-
     pub fn process_events<F>(&mut self, mut callback: F)
     where
-        F: FnMut(&mut ControlFlow, glfw::WindowEvent),
+        F: FnMut(&mut ControlFlow, &glfw::WindowEvent),
     {
+        self.win.glfw.poll_events();
+
         let mut flow = ControlFlow::Continue;
         for (_, event) in glfw::flush_messages(&self.events) {
-            callback(&mut flow, event);
+            callback(&mut flow, &event);
         }
 
         if flow == ControlFlow::Quit {
-            self.win.set_should_close(true);
+            self.set_should_close(true);
         }
     }
 }
 
-impl AsRef<glfw::Window> for Window {
-    fn as_ref(&self) -> &glfw::Window {
+impl Deref for Window {
+    type Target = glfw::Window;
+
+    fn deref(&self) -> &Self::Target {
         &self.win
     }
 }
 
-impl AsMut<glfw::Window> for Window {
-    fn as_mut(&mut self) -> &mut glfw::Window {
+impl DerefMut for Window {
+    fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.win
     }
+}
+
+fn error_callback(_: glfw::Error, description: String, error_count: &Cell<usize>) {
+    eprintln!("GLFW error {}: {}", error_count.get(), description);
+    error_count.set(error_count.get() + 1);
 }

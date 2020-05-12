@@ -8,8 +8,8 @@ edition = "2018"
 
 [dependencies]
 gl = "0.14.0"
-# glfw = "0.34.0"
-# imgui = "0.3.0"
-imgui-glfw-rs = "0.4.1"
+glfw = "0.37.0"
+imgui = "0.3.0"
+imgui-opengl-renderer = "0.7.0"
 cgmath = "0.17.0"
 image = "0.23.4"

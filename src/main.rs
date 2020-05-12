@@ -1,4 +1,5 @@
 mod ogl;
+mod ui;
 mod window;
 
 use ogl::{
@@ -11,26 +12,26 @@ use ogl::{
 use window::Window;
 
 use cgmath::Vector3;
-use imgui_glfw_rs::glfw::{self, Action, Key};
-use imgui_glfw_rs::imgui;
-use imgui_glfw_rs::ImguiGLFW;
+use glfw::{self, Action, Context, Key};
+use imgui;
+use ui::ImguiGLFW;
 
 fn main() {
     // Create a windowed mode window and its OpenGL context
-    let mut window = Window::new("Win", (800, 600));
+    let mut window = Window::new("Bootstrap", (800, 600));
     // Make the window's context current
     window.make_current();
     window.load_gl();
     unsafe {
         gl::Enable(gl::BLEND);
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-        // gl::Enable(gl::DEPTH_TEST);
-        // gl::DepthFunc(gl::LESS);
-        // gl::ClearColor(0.1, 0.1, 0.1, 1.0);
+        gl::Enable(gl::DEPTH_TEST);
+        gl::DepthFunc(gl::LESS);
+        gl::ClearColor(0.1, 0.1, 0.1, 1.0);
     }
 
     let mut imgui = imgui::Context::create();
-    let mut imgui_glfw = ImguiGLFW::new(&mut imgui, window.as_mut());
+    let mut imgui_glfw = ImguiGLFW::new(&mut imgui, &mut window);
 
     let root = env!("CARGO_MANIFEST_DIR");
     let v_path = format!("{}/shadersrc/vertex.glsl", root);
@@ -45,40 +46,38 @@ fn main() {
 
     vao.add_buffer(&vbo, &layout);
     let mut colors: [f32; 3] = [1.0, 1.0, 1.0];
-    // Loop until the user closes the window
+
     while !window.should_close() {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+        }
 
-            program.bind();
-            program.set_uniform("col", Vector3::from(colors));
-            program.send_uniforms();
-            vao.bind();
+        program.bind();
+        program.set_uniform("col", Vector3::from(colors));
+        program.send_uniforms();
+        vao.bind();
 
+        unsafe {
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
         }
 
-        let ui = imgui_glfw.frame(window.as_mut(), &mut imgui);
-
-        imgui::Window::new(&ui, imgui::im_str!("Playground"))
+        let ui = imgui_glfw.frame(&mut window, &mut imgui);
+        imgui::Window::new(imgui::im_str!("Playground"))
             .size([300.0, 300.0], imgui::Condition::Once)
-            .build(|| {
+            .build(&ui, || {
                 if ui.collapsing_header(imgui::im_str!("Color")).build() {
-                    ui.color_picker(
-                        imgui::im_str!("Pick a Color"),
-                        imgui::EditableColor::Float3(&mut colors),
-                    )
-                    .alpha(false)
-                    .rgb(true)
-                    .build();
+                    imgui::ColorPicker::new(imgui::im_str!("Pick a Color"), &mut colors)
+                        .alpha(false)
+                        .display_rgb(true)
+                        .build(&ui);
                 }
             });
-        imgui_glfw.draw(ui, window.as_mut());
+        imgui_glfw.draw(ui, &mut window);
+        window.swap_buffers();
 
-        window.update();
         window.process_events(|flow: &mut window::ControlFlow, event| {
-            imgui_glfw.handle_event(&mut imgui, &event);
-            match event {
+            imgui_glfw.handle_event(&mut imgui, event);
+            match *event {
                 glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
                     *flow = window::ControlFlow::Quit;
                 }

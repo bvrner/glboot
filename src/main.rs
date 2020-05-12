@@ -5,6 +5,7 @@ mod window;
 use ogl::{
     buffers::{
         array::{Layout, VertexArray},
+        index::IndexBuffer,
         vertex::VertexBuffer,
     },
     program::ShaderProgram,
@@ -38,27 +39,37 @@ fn main() {
     let f_path = format!("{}/shadersrc/frag.glsl", root);
     let mut program = ShaderProgram::from_files(v_path, f_path, None).unwrap();
 
-    let vertices = [-0.5_f32, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, 0.5, 0.0];
-
+    let vertices = [
+        -0.5, 0.5, 0.0, -0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.5, 0.5, 0.0,
+    ];
+    let indices = [0, 1, 2, 0, 3, 2];
     let vao = VertexArray::new();
-    let vbo = VertexBuffer::new(&vertices);
+    let vbo = VertexBuffer::new::<f32>(&vertices);
+    let ibo = IndexBuffer::new::<u8>(&indices);
     let layout = layout![(3, f32, gl::FLOAT)];
 
     vao.add_buffer(&vbo, &layout);
+
+    // imgui utils
     let mut colors: [f32; 3] = [1.0, 1.0, 1.0];
+    let mut clicked = false;
+    let mut mode = gl::FILL;
 
     while !window.should_close() {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+            gl::PolygonMode(gl::FRONT_AND_BACK, mode);
         }
 
         program.bind();
         program.set_uniform("col", Vector3::from(colors));
         program.send_uniforms();
+        ibo.bind();
         vao.bind();
 
         unsafe {
-            gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            // gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_BYTE, std::ptr::null());
         }
 
         let ui = imgui_glfw.frame(&mut window, &mut imgui);
@@ -71,7 +82,14 @@ fn main() {
                         .display_rgb(true)
                         .build(&ui);
                 }
+
+                if ui.collapsing_header(imgui::im_str!("Options")).build() {
+                    if ui.checkbox(imgui::im_str!("Wireframe"), &mut clicked) {
+                        mode = if clicked { gl::LINE } else { gl::FILL };
+                    }
+                }
             });
+
         imgui_glfw.draw(ui, &mut window);
         window.swap_buffers();
 

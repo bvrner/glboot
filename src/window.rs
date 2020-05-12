@@ -20,12 +20,8 @@ pub enum ControlFlow {
 
 impl Window {
     pub fn new(name: &str, dimensions: (u32, u32)) -> Self {
-        // let mut glfw = glfw::init(Some(glfw::Callback {
-        //     f: error_callback,
-        //     data: Cell::new(0),
-        // }))
-        // .unwrap();
         let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+
         glfw.window_hint(WindowHint::ContextVersion(3, 3));
         glfw.window_hint(WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
 
@@ -72,9 +68,4 @@ impl DerefMut for Window {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.win
     }
-}
-
-fn error_callback(_: glfw::Error, description: String, error_count: &Cell<usize>) {
-    eprintln!("GLFW error {}: {}", error_count.get(), description);
-    error_count.set(error_count.get() + 1);
 }

@@ -2,13 +2,13 @@
 // use glfw::WindowHint;
 use glfw::WindowHint;
 use std::{
-    cell::Cell,
     ops::{Deref, DerefMut},
     sync::mpsc::Receiver,
 };
 
 pub struct Window {
     win: glfw::Window,
+    glfw: glfw::Glfw, // needed to guarantee GLFW isn't terminated before everything else is droped
     events: Receiver<(f64, glfw::WindowEvent)>,
 }
 
@@ -31,7 +31,7 @@ impl Window {
 
         win.set_all_polling(true);
         win.set_sticky_keys(true);
-        Window { win, events }
+        Window { win, glfw, events }
     }
 
     #[inline]
@@ -43,7 +43,7 @@ impl Window {
     where
         F: FnMut(&mut ControlFlow, &glfw::WindowEvent),
     {
-        self.win.glfw.poll_events();
+        self.glfw.poll_events();
 
         let mut flow = ControlFlow::Continue;
         for (_, event) in glfw::flush_messages(&self.events) {

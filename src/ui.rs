@@ -2,7 +2,7 @@
 // Enough of a problem to be a pain for me, but not enough to justify a fork, so I just copied the file here
 
 // Original work: Copyright (c) 2019 Stephan Schauerte
-// https://github.com/K4ugummi/imgui-glfw-rs
+// URL: https://github.com/K4ugummi/imgui-glfw-rs
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -117,7 +117,7 @@ impl ImguiGLFW {
             WindowEvent::Key(key, _, action, modifier) => {
                 Self::set_mod(imgui, modifier);
 
-                // Unknown will result in a panic
+                // Unknown is -1, when cast to usize it will go out of bounds, resulting in a panic
                 if key != Key::Unknown {
                     imgui.io_mut().keys_down[key as usize] = action != Action::Release;
                 }
@@ -174,8 +174,6 @@ impl ImguiGLFW {
         }
 
         self.renderer.render(ui);
-        // not sure why, but without this the Cursor drop will cause a segfault when the program ends
-        window.set_cursor(None);
     }
 
     fn set_mod(imgui: &mut Context, modifier: Modifiers) {

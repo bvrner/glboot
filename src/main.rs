@@ -1,7 +1,9 @@
+mod camera;
 mod ogl;
 mod ui;
 mod window;
 
+use camera::Camera;
 use ogl::{
     buffers::{
         array::{Layout, VertexArray},
@@ -11,12 +13,12 @@ use ogl::{
     program::ShaderProgram,
     texture::Texture,
 };
+use ui::ImguiGLFW;
 use window::Window;
 
-use cgmath::Vector3;
+use cgmath::{Matrix4, Point3, Vector3};
 use glfw::{self, Action, Context, Key};
 use imgui;
-use ui::ImguiGLFW;
 
 fn main() {
     // shader and texture paths
@@ -43,9 +45,23 @@ fn main() {
     let mut program = ShaderProgram::from_files(v_path, f_path, None).unwrap();
     let texture = Texture::new(t_path).unwrap();
 
+    // let vertices = [
+    //     -0.5, 0.5, 0.0, 0.0, 1.0, -0.5, -0.5, 0.0, 0.0, 0.0, 0.5, -0.5, 0.0, 1.0, 0.0, 0.5, 0.5,
+    //     0.0, 1.0, 1.0,
+    // ];
+
     let vertices = [
-        -0.5, 0.5, 0.0, 0.0, 1.0, -0.5, -0.5, 0.0, 0.0, 0.0, 0.5, -0.5, 0.0, 1.0, 0.0, 0.5, 0.5,
-        0.0, 1.0, 1.0,
+        -0.5, -0.5, -0.5, 0.0, 0.0, 0.5, -0.5, -0.5, 1.0, 0.0, 0.5, 0.5, -0.5, 1.0, 1.0, 0.5, 0.5,
+        -0.5, 1.0, 1.0, -0.5, 0.5, -0.5, 0.0, 1.0, -0.5, -0.5, -0.5, 0.0, 0.0, -0.5, -0.5, 0.5,
+        0.0, 0.0, 0.5, -0.5, 0.5, 1.0, 0.0, 0.5, 0.5, 0.5, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, -0.5,
+        0.5, 0.5, 0.0, 1.0, -0.5, -0.5, 0.5, 0.0, 0.0, -0.5, 0.5, 0.5, 1.0, 0.0, -0.5, 0.5, -0.5,
+        1.0, 1.0, -0.5, -0.5, -0.5, 0.0, 1.0, -0.5, -0.5, -0.5, 0.0, 1.0, -0.5, -0.5, 0.5, 0.0,
+        0.0, -0.5, 0.5, 0.5, 1.0, 0.0, 0.5, 0.5, 0.5, 1.0, 0.0, 0.5, 0.5, -0.5, 1.0, 1.0, 0.5,
+        -0.5, -0.5, 0.0, 1.0, 0.5, -0.5, -0.5, 0.0, 1.0, 0.5, -0.5, 0.5, 0.0, 0.0, 0.5, 0.5, 0.5,
+        1.0, 0.0, -0.5, -0.5, -0.5, 0.0, 1.0, 0.5, -0.5, -0.5, 1.0, 1.0, 0.5, -0.5, 0.5, 1.0, 0.0,
+        0.5, -0.5, 0.5, 1.0, 0.0, -0.5, -0.5, 0.5, 0.0, 0.0, -0.5, -0.5, -0.5, 0.0, 1.0, -0.5, 0.5,
+        -0.5, 0.0, 1.0, 0.5, 0.5, -0.5, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 0.0, 0.5, 0.5, 0.5, 1.0, 0.0,
+        -0.5, 0.5, 0.5, 0.0, 0.0, -0.5, 0.5, -0.5, 0.0, 1.0,
     ];
     let indices = [0, 1, 2, 0, 3, 2];
     let vao = VertexArray::new();
@@ -60,6 +76,21 @@ fn main() {
     let mut clicked = false;
     let mut mode = gl::FILL;
 
+    let camera = Camera::new(
+        Point3::new(0.0, 2.0, 1.0),
+        Vector3::new(0.0, -0.5, -1.0),
+        Vector3::unit_y(),
+    );
+
+    program.set_uniform(
+        "model",
+        Matrix4::from_translation(Vector3::new(0.0, 0.0, -2.0)),
+    );
+    program.set_uniform(
+        "projection",
+        cgmath::perspective(cgmath::Deg(45_f32), 800.0 / 600.0, 0.1_f32, 100f32),
+    );
+    program.set_uniform("view", camera.get_matrix());
     program.set_uniform("tex", 0);
     while !window.should_close() {
         unsafe {
@@ -71,12 +102,12 @@ fn main() {
         program.bind();
         program.set_uniform("col", Vector3::from(colors));
         program.send_uniforms();
-        ibo.bind();
+        // ibo.bind();
         vao.bind();
 
         unsafe {
-            // gl::DrawArrays(gl::TRIANGLES, 0, 3);
-            gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_BYTE, std::ptr::null());
+            gl::DrawArrays(gl::TRIANGLES, 0, 36);
+            // gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_BYTE, std::ptr::null());
         }
 
         let ui = imgui_glfw.frame(&mut window, &mut imgui);

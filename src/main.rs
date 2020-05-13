@@ -1,9 +1,11 @@
-mod camera;
+mod core;
 mod ogl;
-mod ui;
-mod window;
 
-use camera::Camera;
+use crate::core::{
+    camera::Camera,
+    ui::ImguiGLFW,
+    window::{self, Window},
+};
 use ogl::{
     buffers::{
         array::{Layout, VertexArray},
@@ -13,8 +15,6 @@ use ogl::{
     program::ShaderProgram,
     texture::Texture,
 };
-use ui::ImguiGLFW;
-use window::Window;
 
 use cgmath::{Matrix4, Point3, Vector3};
 use glfw::{self, Action, Context, Key};
@@ -137,7 +137,19 @@ fn main() {
                 glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
                     *flow = window::ControlFlow::Quit;
                 }
-                glfw::WindowEvent::FramebufferSize(w, h) => unsafe { gl::Viewport(0, 0, w, h) },
+                glfw::WindowEvent::FramebufferSize(w, h) => {
+                    unsafe { gl::Viewport(0, 0, w, h) };
+
+                    program.set_uniform(
+                        "projection",
+                        cgmath::perspective(
+                            cgmath::Deg(45_f32),
+                            w as f32 / h as f32,
+                            0.1_f32,
+                            100f32,
+                        ),
+                    );
+                }
                 _ => {}
             }
         });

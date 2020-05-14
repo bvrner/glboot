@@ -81,14 +81,14 @@ fn main() {
         Vector3::new(0.0, -0.5, -1.0),
         Vector3::unit_y(),
     );
-
+    let mut fov = 45.0;
     program.set_uniform(
         "model",
         Matrix4::from_translation(Vector3::new(0.0, 0.0, -2.0)),
     );
     program.set_uniform(
         "projection",
-        cgmath::perspective(cgmath::Deg(45_f32), 800.0 / 600.0, 0.1_f32, 100f32),
+        cgmath::perspective(cgmath::Deg(fov), 800.0 / 600.0, 0.1_f32, 100f32),
     );
     program.set_uniform("view", camera.get_matrix());
     program.set_uniform("tex", 0);
@@ -114,7 +114,7 @@ fn main() {
         imgui::Window::new(imgui::im_str!("Playground"))
             .size([300.0, 300.0], imgui::Condition::Once)
             .build(&ui, || {
-                if ui.collapsing_header(imgui::im_str!("Color")).build() {
+                if ui.collapsing_header(imgui::im_str!("Object")).build() {
                     imgui::ColorPicker::new(imgui::im_str!("Pick a Color"), &mut colors)
                         .alpha(false)
                         .display_rgb(true)
@@ -124,6 +124,21 @@ fn main() {
                 if ui.collapsing_header(imgui::im_str!("Options")).build() {
                     if ui.checkbox(imgui::im_str!("Wireframe"), &mut clicked) {
                         mode = if clicked { gl::LINE } else { gl::FILL };
+                    }
+                }
+
+                if ui.collapsing_header(imgui::im_str!("Camera")).build() {
+                    if imgui::Slider::new(imgui::im_str!("FOV"), 0.1..=90.0).build(&ui, &mut fov) {
+                        let (w, h) = window.get_framebuffer_size();
+                        program.set_uniform(
+                            "projection",
+                            cgmath::perspective(
+                                cgmath::Deg(fov),
+                                w as f32 / h as f32,
+                                0.1_f32,
+                                100f32,
+                            ),
+                        );
                     }
                 }
             });

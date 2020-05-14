@@ -1,20 +1,9 @@
-mod core;
-mod ogl;
-
-use crate::core::{
+use glboot::core::{
     camera::Camera,
     ui::ImguiGLFW,
     window::{self, Window},
 };
-use ogl::{
-    buffers::{
-        array::{Layout, VertexArray},
-        index::IndexBuffer,
-        vertex::VertexBuffer,
-    },
-    program::ShaderProgram,
-    texture::Texture,
-};
+use glboot::ogl::{model::mesh::Model, program::ShaderProgram, texture::Texture};
 
 use cgmath::{Matrix4, Point3, Vector3};
 use glfw::{self, Action, Context, Key};
@@ -26,6 +15,8 @@ fn main() {
     let v_path = format!("{}/shaders/vertex.glsl", root);
     let f_path = format!("{}/shaders/frag.glsl", root);
     let t_path = format!("{}/textures/wall.jpg", root);
+    let m_path = format!("{}/models/cube.obj", root);
+    println!("{}", root);
 
     let mut window = Window::new("Bootstrap", (800, 600));
     window.make_current();
@@ -44,43 +35,14 @@ fn main() {
 
     let mut program = ShaderProgram::from_files(v_path, f_path, None).unwrap();
     let texture = Texture::new(t_path).unwrap();
-
-    // let vertices = [
-    //     -0.5, 0.5, 0.0, 0.0, 1.0, -0.5, -0.5, 0.0, 0.0, 0.0, 0.5, -0.5, 0.0, 1.0, 0.0, 0.5, 0.5,
-    //     0.0, 1.0, 1.0,
-    // ];
-
-    let vertices = [
-        -0.5, -0.5, -0.5, 0.0, 0.0, 0.5, -0.5, -0.5, 1.0, 0.0, 0.5, 0.5, -0.5, 1.0, 1.0, 0.5, 0.5,
-        -0.5, 1.0, 1.0, -0.5, 0.5, -0.5, 0.0, 1.0, -0.5, -0.5, -0.5, 0.0, 0.0, -0.5, -0.5, 0.5,
-        0.0, 0.0, 0.5, -0.5, 0.5, 1.0, 0.0, 0.5, 0.5, 0.5, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, -0.5,
-        0.5, 0.5, 0.0, 1.0, -0.5, -0.5, 0.5, 0.0, 0.0, -0.5, 0.5, 0.5, 1.0, 0.0, -0.5, 0.5, -0.5,
-        1.0, 1.0, -0.5, -0.5, -0.5, 0.0, 1.0, -0.5, -0.5, -0.5, 0.0, 1.0, -0.5, -0.5, 0.5, 0.0,
-        0.0, -0.5, 0.5, 0.5, 1.0, 0.0, 0.5, 0.5, 0.5, 1.0, 0.0, 0.5, 0.5, -0.5, 1.0, 1.0, 0.5,
-        -0.5, -0.5, 0.0, 1.0, 0.5, -0.5, -0.5, 0.0, 1.0, 0.5, -0.5, 0.5, 0.0, 0.0, 0.5, 0.5, 0.5,
-        1.0, 0.0, -0.5, -0.5, -0.5, 0.0, 1.0, 0.5, -0.5, -0.5, 1.0, 1.0, 0.5, -0.5, 0.5, 1.0, 0.0,
-        0.5, -0.5, 0.5, 1.0, 0.0, -0.5, -0.5, 0.5, 0.0, 0.0, -0.5, -0.5, -0.5, 0.0, 1.0, -0.5, 0.5,
-        -0.5, 0.0, 1.0, 0.5, 0.5, -0.5, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 0.0, 0.5, 0.5, 0.5, 1.0, 0.0,
-        -0.5, 0.5, 0.5, 0.0, 0.0, -0.5, 0.5, -0.5, 0.0, 1.0,
-    ];
-    let indices = [0, 1, 2, 0, 3, 2];
-    let vao = VertexArray::new();
-    let vbo = VertexBuffer::new::<f32>(&vertices);
-    let ibo = IndexBuffer::new::<u8>(&indices);
-    let layout = layout![(3, f32, gl::FLOAT), (2, f32, gl::FLOAT)];
-
-    vao.add_buffer(&vbo, &layout);
+    let model = Model::load(m_path).unwrap();
 
     // imgui utils
     let mut colors: [f32; 3] = [1.0, 1.0, 1.0];
     let mut clicked = false;
     let mut mode = gl::FILL;
 
-    let camera = Camera::new(
-        Point3::new(0.0, 2.0, 1.0),
-        Vector3::new(0.0, -0.5, -1.0),
-        Vector3::unit_y(),
-    );
+    let camera = Camera::new(Point3::new(0.0, 2.0, 1.0), Vector3::new(0.0, -0.5, -1.0));
     let mut fov = 45.0;
     program.set_uniform(
         "model",
@@ -99,17 +61,9 @@ fn main() {
         }
 
         texture.bind(0);
-        program.bind();
         program.set_uniform("col", Vector3::from(colors));
-        program.send_uniforms();
-        // ibo.bind();
-        vao.bind();
 
-        unsafe {
-            gl::DrawArrays(gl::TRIANGLES, 0, 36);
-            // gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_BYTE, std::ptr::null());
-        }
-
+        model.draw(&program);
         let ui = imgui_glfw.frame(&mut window, &mut imgui);
         imgui::Window::new(imgui::im_str!("Playground"))
             .size([300.0, 300.0], imgui::Condition::Once)
@@ -157,12 +111,7 @@ fn main() {
 
                     program.set_uniform(
                         "projection",
-                        cgmath::perspective(
-                            cgmath::Deg(45_f32),
-                            w as f32 / h as f32,
-                            0.1_f32,
-                            100f32,
-                        ),
+                        cgmath::perspective(cgmath::Deg(fov), w as f32 / h as f32, 0.1_f32, 100f32),
                     );
                 }
                 _ => {}

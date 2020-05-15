@@ -81,7 +81,7 @@ impl Model {
     where
         P: AsRef<Path> + Debug,
     {
-        super::obj::load_obj(path)
+        super::loaders::load_obj(path)
     }
 
     pub fn draw(&self, shader: &ShaderProgram) {

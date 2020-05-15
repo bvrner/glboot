@@ -1,8 +1,14 @@
 use super::mesh::{Mesh, Model, Vertex};
 use cgmath::{vec2, vec3};
 
-use std::fmt::Debug;
-use std::path::Path;
+use std::{error::Error, fmt::Debug, path::Path};
+
+// TODO General error type for all handlers
+#[derive(Debug, Clone)]
+pub enum LoaderError {
+    IOError,
+    FileError,
+}
 
 pub fn load_obj<P>(path: P) -> Result<Model, String>
 where
@@ -11,20 +17,31 @@ where
     let (models, _materials) = tobj::load_obj(path, true).unwrap();
     let mut meshs = vec![];
 
-    for model in models.iter() {
-        let mesh = &model.mesh;
+    for model in models.into_iter() {
+        let mesh = model.mesh;
         let num_vertices = mesh.positions.len() / 3;
 
         // data to fill
         let mut vertices: Vec<Vertex> = Vec::with_capacity(num_vertices);
-        let indices: Vec<u32> = mesh.indices.clone();
+        let indices: Vec<u32> = mesh.indices;
 
-        let (p, n, t) = (&mesh.positions, &mesh.normals, &mesh.texcoords);
+        let (p, n, t) = (mesh.positions, mesh.normals, mesh.texcoords);
         for i in 0..num_vertices {
             vertices.push(Vertex {
-                vertice: vec3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]),
-                normal: vec3(n[i * 3], n[i * 3 + 1], n[i * 3 + 2]),
-                tex_coords: vec2(t[i * 2], t[i * 2 + 1]),
+                vertice: vec3(
+                    p.get(i * 3).copied().unwrap_or_default(),
+                    p.get(i * 3 + 1).copied().unwrap_or_default(),
+                    p.get(i * 3 + 2).copied().unwrap_or_default(),
+                ),
+                normal: vec3(
+                    n.get(i * 3).copied().unwrap_or_default(),
+                    n.get(i * 3 + 1).copied().unwrap_or_default(),
+                    n.get(i * 3 + 2).copied().unwrap_or_default(),
+                ),
+                tex_coords: vec2(
+                    t.get(i * 2).copied().unwrap_or_default(),
+                    t.get(i * 2 + 1).copied().unwrap_or_default(),
+                ),
             });
         }
 

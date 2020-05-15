@@ -1,2 +1,2 @@
+pub mod loaders;
 pub mod mesh;
-pub mod obj;

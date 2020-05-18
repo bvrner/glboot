@@ -9,7 +9,7 @@ use imgui::Context;
 pub struct ImGUI {
     imgui: imgui::Context,
     imgui_glfw: ImguiGLFW,
-    pub state: Option<ImGuiState>,
+    // pub state: Option<ImGuiState>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -17,6 +17,7 @@ pub struct ImGuiState {
     pub colors: [f32; 3],
     pub wireframe: bool,
     pub cam_slider: f32,
+    pub scale: f32,
 }
 
 impl Default for ImGuiState {
@@ -25,6 +26,7 @@ impl Default for ImGuiState {
             colors: [0.5, 0.5, 0.5],
             wireframe: false,
             cam_slider: 45.0,
+            scale: 0.1,
         }
     }
 }
@@ -38,7 +40,7 @@ impl ImGUI {
         ImGUI {
             imgui,
             imgui_glfw,
-            state: Some(ImGuiState::default()),
+            // state: Some(ImGuiState::default()),
         }
     }
 
@@ -53,7 +55,10 @@ impl ImGUI {
         imgui::Window::new(imgui::im_str!("Playground"))
             .size([300.0, 300.0], imgui::Condition::Once)
             .build(&ui, || {
-                color_picker(&ui, &mut state.colors);
+                if ui.collapsing_header(imgui::im_str!("Object")).build() {
+                    color_picker(&ui, &mut state.colors);
+                    scale(&ui, &mut state.scale);
+                }
                 options(&ui, &mut state.wireframe);
                 camera(&ui, &mut state.cam_slider);
             });
@@ -63,12 +68,10 @@ impl ImGUI {
 
 #[inline]
 fn color_picker(ui: &imgui::Ui, colors: &mut [f32; 3]) {
-    if ui.collapsing_header(imgui::im_str!("Object")).build() {
-        imgui::ColorPicker::new(imgui::im_str!("Pick a Color"), colors)
-            .alpha(false)
-            .display_rgb(true)
-            .build(&ui);
-    }
+    imgui::ColorPicker::new(imgui::im_str!("Pick a Color"), colors)
+        .alpha(false)
+        .display_rgb(true)
+        .build(&ui);
 }
 
 #[inline]
@@ -83,4 +86,9 @@ fn camera(ui: &imgui::Ui, fov: &mut f32) {
     if ui.collapsing_header(imgui::im_str!("Camera")).build() {
         imgui::Slider::new(imgui::im_str!("FOV"), 0.1..=90.0).build(&ui, fov);
     }
+}
+
+#[inline]
+fn scale(ui: &imgui::Ui, scale: &mut f32) {
+    imgui::Slider::new(imgui::im_str!("Scale"), 0.1..=1.0).build(&ui, scale);
 }

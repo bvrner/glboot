@@ -34,10 +34,6 @@ fn main() {
 
     let camera = Camera::new(Point3::new(0.0, 2.0, 1.0), Vector3::new(0.0, -0.5, -1.0));
     program.set_uniform(
-        "model",
-        Matrix4::from_translation(Vector3::new(0.0, 0.0, -10.0)) * Matrix4::from_scale(0.1),
-    );
-    program.set_uniform(
         "projection",
         cgmath::perspective(cgmath::Deg(45.0_f32), 800.0 / 600.0, 0.1_f32, 100f32),
     );
@@ -73,6 +69,11 @@ fn main() {
                 0.1_f32,
                 100f32,
             ),
+        );
+        program.set_uniform(
+            "model",
+            Matrix4::from_translation(Vector3::new(0.0, 0.0, -10.0))
+                * Matrix4::from_scale(gui_state.scale),
         );
 
         window.swap_buffers();

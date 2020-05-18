@@ -25,14 +25,16 @@ fn main() {
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         gl::Enable(gl::DEPTH_TEST);
         gl::DepthFunc(gl::LESS);
+        gl::Enable(gl::CULL_FACE);
         gl::ClearColor(0.1, 0.1, 0.1, 1.0);
     }
 
     let mut program = ShaderProgram::from_files(v_path, f_path, None).unwrap();
     let texture = Texture::new(t_path).unwrap();
     let model = Model::load(m_path).unwrap();
+    // dbg!(&model);
 
-    let camera = Camera::new(Point3::new(0.0, 2.0, 1.0), Vector3::new(0.0, -0.5, -1.0));
+    let camera = Camera::new(Point3::new(0.0, 0.5, 0.5), Vector3::new(0.0, -0.5, -0.5));
     program.set_uniform(
         "projection",
         cgmath::perspective(cgmath::Deg(45.0_f32), 800.0 / 600.0, 0.1_f32, 100f32),
@@ -72,7 +74,7 @@ fn main() {
         );
         program.set_uniform(
             "model",
-            Matrix4::from_translation(Vector3::new(0.0, 0.0, -10.0))
+            Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0))
                 * Matrix4::from_scale(gui_state.scale),
         );
 

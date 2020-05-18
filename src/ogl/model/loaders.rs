@@ -15,6 +15,7 @@ where
     P: AsRef<Path> + Debug,
 {
     let (models, _materials) = tobj::load_obj(path, true).unwrap();
+    // println!("{:?}", &models);
     let meshs: Vec<Mesh> = models
         .into_iter()
         .map(|model| {
@@ -71,6 +72,7 @@ where
             //     // NOTE: no height maps
             // }
 
+            // dbg!(&vertices);
             Mesh::new(vertices, vec![], indices)
         })
         .collect();

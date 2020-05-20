@@ -42,17 +42,6 @@ impl Mesh {
         indices: Vec<u32>,
         material: Option<Material>,
     ) -> Self {
-        // let vbo = VertexBuffer::new(&vertices);
-        // let ibo = IndexBuffer::new(&indices);
-        // let vao = VertexArray::new();
-        // let layout = layout![
-        //     (3, f32, gl::FLOAT),
-        //     (3, f32, gl::FLOAT),
-        //     (2, f32, gl::FLOAT)
-        // ];
-
-        // vao.add_buffer(&vbo, &layout);
-
         Mesh {
             vertices,
             textures,

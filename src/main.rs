@@ -1,10 +1,11 @@
 use glboot::core::{
+    arcball::ArcBall,
     camera::Camera,
     window::{self, Window},
 };
 use glboot::ogl::{model::mesh::Model, program::ShaderProgram};
 
-use cgmath::{Matrix4, Point3, Vector3};
+use cgmath::{Matrix4, Point2, Point3, SquareMatrix, Vector3};
 use glfw::{self, Action, Context, Key};
 
 fn main() {
@@ -30,17 +31,23 @@ fn main() {
 
     let mut program = ShaderProgram::from_files(v_path, f_path, None).unwrap();
     let model = Model::load(m_path).unwrap();
-    // dbg!(&model);
 
+    let mut gui_state = glboot::ImGuiState::default();
     let camera = Camera::new(Point3::new(0.0, 0.5, 0.5), Vector3::new(0.0, -0.5, -0.5));
+
     program.set_uniform(
         "projection",
         cgmath::perspective(cgmath::Deg(45.0_f32), 800.0 / 600.0, 0.1_f32, 100f32),
     );
     program.set_uniform("view", camera.get_matrix());
-    program.set_uniform("tex", 0);
+    program.set_uniform(
+        "model",
+        Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0))
+            * Matrix4::from_scale(gui_state.scale),
+    );
+    program.set_uniform("arc", Matrix4::identity());
 
-    let mut gui_state = glboot::ImGuiState::default();
+    let mut arc = ArcBall::new(800.0, 600.0);
     while !window.should_close() {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
@@ -55,36 +62,51 @@ fn main() {
         }
 
         model.draw(&mut program);
-        imgui.draw(&mut window, &mut gui_state);
-        program.set_uniform("col", Vector3::from(gui_state.colors));
+        if imgui.draw(&mut window, &mut gui_state) {
+            program.set_uniform("col", Vector3::from(gui_state.colors));
 
-        let (w, h) = window.get_framebuffer_size();
-        program.set_uniform(
-            "projection",
-            cgmath::perspective(
-                cgmath::Deg(gui_state.cam_slider),
-                w as f32 / h as f32,
-                0.1_f32,
-                100f32,
-            ),
-        );
-        program.set_uniform(
-            "model",
-            Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0))
-                * Matrix4::from_scale(gui_state.scale),
-        );
-
+            let (w, h) = window.get_framebuffer_size();
+            program.set_uniform(
+                "projection",
+                cgmath::perspective(
+                    cgmath::Deg(gui_state.cam_slider),
+                    w as f32 / h as f32,
+                    0.1_f32,
+                    100f32,
+                ),
+            );
+            program.set_uniform(
+                "model",
+                Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0))
+                    * Matrix4::from_scale(gui_state.scale),
+            );
+        }
         window.swap_buffers();
 
+        let point = window.get_cursor_pos();
         window.process_events(|flow: &mut window::ControlFlow, event| {
             imgui.handle_event(&event);
             match *event {
                 glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
                     *flow = window::ControlFlow::Quit;
                 }
+                glfw::WindowEvent::MouseButton(glfw::MouseButtonLeft, Action::Press, _) => {
+                    let point = Point2::new(point.0 as f32, point.1 as f32);
+                    // program.set_uniform("arc", Matrix4::from(arc.last_rotation));
+                    arc.click(point);
+                }
+                glfw::WindowEvent::MouseButton(glfw::MouseButtonLeft, Action::Release, _) => {
+                    arc.is_on = false;
+                }
+                glfw::WindowEvent::CursorPos(x, y) => {
+                    if arc.is_on {
+                        let rotation = Matrix4::from(arc.drag(Point2::new(x as f32, y as f32)));
+                        program.set_uniform("arc", rotation);
+                    }
+                }
                 glfw::WindowEvent::FramebufferSize(w, h) => {
                     unsafe { gl::Viewport(0, 0, w, h) };
-
+                    arc.update(w as f32, h as f32);
                     program.set_uniform(
                         "projection",
                         cgmath::perspective(

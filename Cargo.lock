@@ -328,6 +328,7 @@ dependencies = [
  "image",
  "imgui",
  "imgui-opengl-renderer",
+ "rayon",
  "tobj",
 ]
 

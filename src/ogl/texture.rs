@@ -7,8 +7,12 @@ use std::{convert::TryInto, ffi::c_void, path::Path};
 pub struct Texture(GLuint);
 
 impl Texture {
-    pub fn new<P: AsRef<Path>>(path: P) -> image::ImageResult<Texture> {
-        let image = image::open(path)?.flipv();
+    pub fn new<P: AsRef<Path>>(path: P, flip: bool) -> image::ImageResult<Texture> {
+        let image = if flip {
+            image::open(&path)?.flipv()
+        } else {
+            image::open(path)?
+        };
         let data = image.to_bytes();
 
         let (internal_format, format) = match image {
@@ -16,6 +20,8 @@ impl Texture {
             DynamicImage::ImageBgra8(_) => (gl::RGBA, gl::BGRA),
             DynamicImage::ImageRgb8(_) => (gl::RGB, gl::RGB),
             DynamicImage::ImageRgba8(_) => (gl::RGBA, gl::RGBA),
+            DynamicImage::ImageLuma8(_) => (gl::RED, gl::RED),
+            DynamicImage::ImageLumaA8(_) => (gl::RG, gl::RG),
             _ => unimplemented!(),
         };
 
@@ -24,12 +30,6 @@ impl Texture {
 
             gl::GenTextures(1, &mut texture);
             gl::BindTexture(gl::TEXTURE_2D, texture);
-
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-
             gl::TexImage2D(
                 gl::TEXTURE_2D,
                 0,
@@ -42,6 +42,16 @@ impl Texture {
                 &data[0] as *const u8 as *const c_void,
             );
             gl::GenerateMipmap(gl::TEXTURE_2D);
+
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_MIN_FILTER,
+                gl::LINEAR_MIPMAP_LINEAR as i32,
+            );
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+
             gl::BindTexture(gl::TEXTURE_2D, 0);
 
             Ok(Texture(texture))

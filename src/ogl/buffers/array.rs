@@ -30,7 +30,7 @@ impl Layout {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct VertexArray(GLuint);
 
 impl VertexArray {

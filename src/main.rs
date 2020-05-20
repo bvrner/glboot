@@ -2,7 +2,7 @@ use glboot::core::{
     camera::Camera,
     window::{self, Window},
 };
-use glboot::ogl::{model::mesh::Model, program::ShaderProgram, texture::Texture};
+use glboot::ogl::{model::mesh::Model, program::ShaderProgram};
 
 use cgmath::{Matrix4, Point3, Vector3};
 use glfw::{self, Action, Context, Key};
@@ -12,9 +12,7 @@ fn main() {
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let v_path = format!("{}/shaders/vertex.glsl", root);
     let f_path = format!("{}/shaders/frag.glsl", root);
-    let t_path = format!("{}/textures/wall.jpg", root);
-    let m_path = format!("{}/models/teapot.obj", root);
-    println!("{}", root);
+    let m_path = format!("{}/models/backpack.obj", root);
 
     let mut window = Window::new("Bootstrap", (800, 600));
     window.make_current();
@@ -27,10 +25,10 @@ fn main() {
         gl::DepthFunc(gl::LESS);
         gl::Enable(gl::CULL_FACE);
         gl::ClearColor(0.1, 0.1, 0.1, 1.0);
+        gl::Clear(gl::COLOR_BUFFER_BIT);
     }
 
     let mut program = ShaderProgram::from_files(v_path, f_path, None).unwrap();
-    let texture = Texture::new(t_path).unwrap();
     let model = Model::load(m_path).unwrap();
     // dbg!(&model);
 
@@ -56,9 +54,7 @@ fn main() {
             );
         }
 
-        texture.bind(0);
-
-        model.draw(&program);
+        model.draw(&mut program);
         imgui.draw(&mut window, &mut gui_state);
         program.set_uniform("col", Vector3::from(gui_state.colors));
 

@@ -1,7 +1,7 @@
 use gl::types::*;
 use std::{ffi::c_void, mem};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct IndexBuffer(GLuint);
 
 impl IndexBuffer {

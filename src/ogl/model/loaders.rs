@@ -1,7 +1,15 @@
-use super::mesh::{Mesh, Model, Vertex};
+use super::mesh::{Material, Mesh, Model, Vertex};
+use crate::ogl::texture::Texture;
 use cgmath::{vec2, vec3};
 
-use std::{error::Error, fmt::Debug, path::Path};
+use rayon::prelude::*;
+
+use std::{
+    error::Error,
+    fmt::Debug,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 // TODO General error type for all handlers
 #[derive(Debug, Clone)]
@@ -14,10 +22,50 @@ pub fn load_obj<P>(path: P) -> Result<Model, String>
 where
     P: AsRef<Path> + Debug,
 {
-    let (models, _materials) = tobj::load_obj(path, true).unwrap();
-    // println!("{:?}", &models);
-    let meshs: Vec<Mesh> = models
-        .into_iter()
+    let (models, materials) = tobj::load_obj(&path, true).unwrap();
+
+    let (materials, textures) = materials.into_iter().fold(
+        (vec![], vec![]), // confusing, I know, sorry
+        |(mut vec, mut texts), mat| {
+            vec.push(Material {
+                specular: mat.specular.into(),
+                diffuse: mat.diffuse.into(),
+                ambient: mat.ambient.into(),
+                shininess: mat.shininess,
+            });
+
+            let mut text_vec = Vec::with_capacity(3);
+            let dir = path.as_ref().parent().unwrap().to_str().unwrap();
+
+            // 1. diffuse map
+            if !mat.diffuse_texture.is_empty() {
+                text_vec.push((
+                    "diffuse".to_owned(),
+                    Texture::new(&format!("{}/{}", dir, mat.diffuse_texture), false).unwrap(),
+                ));
+            }
+            // 2. specular map
+            if !mat.specular_texture.is_empty() {
+                text_vec.push((
+                    "specular".to_owned(),
+                    Texture::new(&format!("{}/{}", dir, mat.specular_texture), false).unwrap(),
+                ));
+            }
+
+            // normal map
+            if !mat.normal_texture.is_empty() {
+                text_vec.push((
+                    "normal".to_owned(),
+                    Texture::new(&format!("{}/{}", dir, mat.normal_texture), false).unwrap(),
+                ));
+            }
+            texts.push(Arc::new(text_vec));
+            (vec, texts)
+        },
+    );
+
+    let mut meshs: Vec<Mesh> = models
+        .into_par_iter()
         .map(|model| {
             let mesh = model.mesh;
             let num_vertices = mesh.positions.len() / 3;
@@ -28,55 +76,39 @@ where
 
             let (p, n, t) = (mesh.positions, mesh.normals, mesh.texcoords);
 
+            // I'm sure that there's a smarter way to do this
+            // but all my approaches were slower in the benchs
             for i in 0..num_vertices {
                 vertices.push(Vertex {
-                    vertice: vec3(
-                        p.get(i * 3).copied().unwrap_or_default(),
-                        p.get(i * 3 + 1).copied().unwrap_or_default(),
-                        p.get(i * 3 + 2).copied().unwrap_or_default(),
-                    ),
-                    normal: vec3(
-                        n.get(i * 3).copied().unwrap_or_default(),
-                        n.get(i * 3 + 1).copied().unwrap_or_default(),
-                        n.get(i * 3 + 2).copied().unwrap_or_default(),
-                    ),
-                    tex_coords: vec2(
-                        t.get(i * 2).copied().unwrap_or_default(),
-                        t.get(i * 2 + 1).copied().unwrap_or_default(),
-                    ),
-                });
+                    vertice: if !p.is_empty() {
+                        vec3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+                    } else {
+                        vec3(0.0, 0.0, 0.0)
+                    },
+                    normal: if !n.is_empty() {
+                        vec3(n[i * 3], n[i * 3 + 1], n[i * 3 + 2])
+                    } else {
+                        vec3(0.0, 0.0, 0.0)
+                    },
+                    tex_coords: if !t.is_empty() {
+                        vec2(t[i * 2], t[i * 2 + 1])
+                    } else {
+                        vec2(0.0, 0.0)
+                    },
+                })
             }
 
-            // process material
-            // let mut textures = Vec::new();
-            // if let Some(material_id) = mesh.material_id {
-            //     let material = &materials[material_id];
+            let (material, texture) = if let Some(index) = mesh.material_id {
+                (Some(materials[index]), Some(textures[index].clone()))
+            } else {
+                (None, None)
+            };
 
-            //     // 1. diffuse map
-            //     if !material.diffuse_texture.is_empty() {
-            //         let texture =
-            //             self.loadMaterialTexture(&material.diffuse_texture, "texture_diffuse");
-            //         textures.push(texture);
-            //     }
-            //     // 2. specular map
-            //     if !material.specular_texture.is_empty() {
-            //         let texture =
-            //             self.loadMaterialTexture(&material.specular_texture, "texture_specular");
-            //         textures.push(texture);
-            //     }
-            //     // 3. normal map
-            //     if !material.normal_texture.is_empty() {
-            //         let texture = self.loadMaterialTexture(&material.normal_texture, "texture_normal");
-            //         textures.push(texture);
-            //     }
-            //     // NOTE: no height maps
-            // }
-
-            // dbg!(&vertices);
-            Mesh::new(vertices, vec![], indices)
+            Mesh::new(vertices, texture, indices, material)
         })
         .collect();
 
+    meshs.iter_mut().for_each(|m| m.setup());
     Ok(Model {
         name: String::new(),
         meshs,

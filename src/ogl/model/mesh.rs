@@ -1,4 +1,4 @@
-use std::{fmt::Debug, path::Path};
+use std::{fmt::Debug, path::Path, sync::Arc};
 
 use crate::ogl::{
     buffers::{array::VertexArray, index::IndexBuffer, vertex::VertexBuffer},
@@ -16,45 +16,77 @@ pub struct Vertex {
     pub tex_coords: Vector2<f32>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
+pub struct Material {
+    pub ambient: Vector3<f32>,
+    pub diffuse: Vector3<f32>,
+    pub specular: Vector3<f32>,
+    pub shininess: f32,
+}
+
+#[derive(Debug, Default)]
 pub struct Mesh {
     pub vertices: Vec<Vertex>,
-    pub textures: Vec<Texture>,
+    pub textures: Option<Arc<Vec<(String, Texture)>>>,
     pub indices: Vec<u32>,
+    pub material: Option<Material>,
     vbo: VertexBuffer,
     ibo: IndexBuffer,
     vao: VertexArray,
 }
 
 impl Mesh {
-    pub fn new(vertices: Vec<Vertex>, textures: Vec<Texture>, indices: Vec<u32>) -> Self {
-        let vbo = VertexBuffer::new(&vertices);
-        let ibo = IndexBuffer::new(&indices);
-        let vao = VertexArray::new();
+    pub fn new(
+        vertices: Vec<Vertex>,
+        textures: Option<Arc<Vec<(String, Texture)>>>, // go I love generics syntax
+        indices: Vec<u32>,
+        material: Option<Material>,
+    ) -> Self {
+        // let vbo = VertexBuffer::new(&vertices);
+        // let ibo = IndexBuffer::new(&indices);
+        // let vao = VertexArray::new();
+        // let layout = layout![
+        //     (3, f32, gl::FLOAT),
+        //     (3, f32, gl::FLOAT),
+        //     (2, f32, gl::FLOAT)
+        // ];
+
+        // vao.add_buffer(&vbo, &layout);
+
+        Mesh {
+            vertices,
+            textures,
+            indices,
+            material,
+            ..Default::default()
+        }
+    }
+
+    pub fn setup(&mut self) {
+        self.vbo = VertexBuffer::new(&self.vertices);
+        self.ibo = IndexBuffer::new(&self.indices);
+        self.vao = VertexArray::new();
         let layout = layout![
             (3, f32, gl::FLOAT),
             (3, f32, gl::FLOAT),
             (2, f32, gl::FLOAT)
         ];
 
-        vao.add_buffer(&vbo, &layout);
-
-        Mesh {
-            vertices,
-            textures,
-            indices,
-            vbo,
-            ibo,
-            vao,
-        }
+        self.vao.add_buffer(&self.vbo, &layout);
     }
 
-    pub fn draw(&self, shader: &ShaderProgram) {
+    pub fn draw(&self, shader: &mut ShaderProgram) {
+        if let Some(ref textures) = self.textures {
+            for (index, (name, tex)) in textures.iter().enumerate() {
+                shader.set_uniform(&name, index as i32);
+                tex.bind(index as u32);
+            }
+        }
+
         shader.bind();
-        shader.send_uniforms();
         self.vao.bind();
         self.ibo.bind();
-
+        shader.send_uniforms();
         unsafe {
             gl::DrawElements(
                 gl::TRIANGLES,
@@ -84,7 +116,7 @@ impl Model {
         super::loaders::load_obj(path)
     }
 
-    pub fn draw(&self, shader: &ShaderProgram) {
+    pub fn draw(&self, shader: &mut ShaderProgram) {
         for mesh in self.meshs.iter() {
             mesh.draw(shader);
         }

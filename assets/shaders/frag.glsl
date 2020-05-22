@@ -1,11 +1,9 @@
 #version 330 core
-in VS_OUT {
-    vec3 Pos;
-    vec2 TexCoords;
-    vec3 TangentLightPos;
-    vec3 TangentViewPos;
-    vec3 TangentFragPos;
-} fs_in;
+
+in vec2 TexCoords;
+in vec3 Normals;
+in vec3 Pos;
+in mat3 TBN;
 
 out vec4 Col;
 
@@ -52,24 +50,24 @@ void main() {
     light.linear = 0.09;
     light.quadratic = 0.032;
 
-    float dist = length(light.position - fs_in.TangentFragPos);
+    float dist = length(light.position - Pos);
     float attenuation = 1.0 / (light.constant + light.linear * dist + light.quadratic * (dist * dist));
 
-    vec3 ambient = light.ambient * texture(material.diffuse_tex, fs_in.TexCoords).rgb;
+    vec3 ambient = light.ambient * texture(material.diffuse_tex, TexCoords).rgb;
 
-    vec3 norm = texture(material.normal_tex, fs_in.TexCoords).rgb;
-    norm = normalize(norm * 2.0 - 1.0);
+    vec3 norm = texture(material.normal_tex, TexCoords).rgb;
+    norm = norm * 2.0 - 1.0;
+    norm = normalize(TBN * norm);
 
-    vec3 lightDir = normalize(fs_in.TangentLightPos - fs_in.TangentFragPos);
+    vec3 lightDir = normalize(light_pos - Pos);
     float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = light.diffuse * diff * texture(material.diffuse_tex, fs_in.TexCoords).rgb;
+    vec3 diffuse = light.diffuse * diff * texture(material.diffuse_tex, TexCoords).rgb;
 
     // specular
-    vec3 viewDir = normalize(fs_in.TangentViewPos - fs_in.TangentFragPos);
+    vec3 viewDir = normalize(view_pos - Pos);
     vec3 reflectDir = reflect(-lightDir, norm);
-    vec3 halfwayDir = normalize(lightDir * viewDir);
-    float spec = pow(max(dot(halfwayDir, norm), 0.0), material.shininess);
-    vec3 specular = light.specular * spec * texture(material.specular_tex, fs_in.TexCoords).rgb;
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    vec3 specular = light.specular * spec * texture(material.specular_tex, TexCoords).rgb;
 
     ambient *= attenuation;
     diffuse *= attenuation;

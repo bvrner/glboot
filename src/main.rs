@@ -85,6 +85,7 @@ fn main() {
         }
         window.update();
 
+        let point = window.get_cursor_pos();
         for (_, event) in glfw::flush_messages(&events) {
             imgui.handle_event(&event);
 
@@ -93,7 +94,6 @@ fn main() {
                     window.set_should_close(true);
                 }
                 glfw::WindowEvent::MouseButton(glfw::MouseButtonRight, Action::Press, _) => {
-                    let point = window.get_cursor_pos();
                     let point = Point2::new(point.0 as f32, point.1 as f32);
                     // program.set_uniform("arc", Matrix4::from(arc.last_rotation));
                     arc.click(point);

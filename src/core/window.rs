@@ -1,6 +1,6 @@
 // use glfw::Context;
 // use glfw::WindowHint;
-use glfw::WindowHint;
+use glfw::{Context, WindowHint};
 use std::{
     ops::{Deref, DerefMut},
     sync::mpsc::Receiver,
@@ -8,8 +8,8 @@ use std::{
 
 pub struct Window {
     win: glfw::Window,
-    glfw: glfw::Glfw, // needed to guarantee GLFW isn't terminated before everything else is droped
-    events: Receiver<(f64, glfw::WindowEvent)>,
+    pub glfw: glfw::Glfw, // needed to guarantee GLFW isn't terminated before everything else is droped
+    pub events: Option<Receiver<(f64, glfw::WindowEvent)>>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -24,6 +24,7 @@ impl Window {
 
         glfw.window_hint(WindowHint::ContextVersion(3, 3));
         glfw.window_hint(WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
+        glfw.window_hint(WindowHint::Samples(Some(4)));
 
         let (mut win, events) = glfw
             .create_window(dimensions.0, dimensions.1, name, glfw::WindowMode::Windowed)
@@ -31,7 +32,11 @@ impl Window {
 
         win.set_all_polling(true);
         win.set_sticky_keys(true);
-        Window { win, glfw, events }
+        Window {
+            win,
+            glfw,
+            events: Some(events),
+        }
     }
 
     #[inline]
@@ -39,21 +44,27 @@ impl Window {
         gl::load_with(|s| self.win.get_proc_address(s) as *const _);
     }
 
-    pub fn process_events<F>(&mut self, mut callback: F)
-    where
-        F: FnMut(&mut ControlFlow, &glfw::WindowEvent),
-    {
+    #[inline]
+    pub fn update(&mut self) {
         self.glfw.poll_events();
-
-        let mut flow = ControlFlow::Continue;
-        for (_, event) in glfw::flush_messages(&self.events) {
-            callback(&mut flow, &event);
-        }
-
-        if flow == ControlFlow::Quit {
-            self.set_should_close(true);
-        }
+        self.win.swap_buffers();
     }
+
+    // pub fn process_events<F>(&mut self, mut callback: F)
+    // where
+    //     F: FnMut(&glfw::WindowEvent) -> ControlFlow,
+    // {
+    //     self.glfw.poll_events();
+
+    //     let mut flow = ControlFlow::Continue;
+    //     for (_, event) in glfw::flush_messages(&self.events) {
+    //         flow = callback(&event);
+    //     }
+
+    //     if flow == ControlFlow::Quit {
+    //         self.set_should_close(true);
+    //     }
+    // }
 }
 
 impl Deref for Window {

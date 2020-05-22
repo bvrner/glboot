@@ -7,8 +7,8 @@ use crate::core::ui::ImguiGLFW;
 use imgui::Context;
 
 pub struct ImGUI {
-    imgui: imgui::Context,
-    imgui_glfw: ImguiGLFW,
+    pub imgui: imgui::Context,
+    pub imgui_glfw: ImguiGLFW,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -52,14 +52,20 @@ impl ImGUI {
             .size([300.0, 300.0], imgui::Condition::Once)
             .build(&ui, || {
                 if ui.collapsing_header(imgui::im_str!("Object")).build() {
-                    updated = color_picker(&ui, &mut state.colors);
-                    updated = scale(&ui, &mut state.scale);
+                    updated |= color_picker(&ui, &mut state.colors);
+                    updated |= scale(&ui, &mut state.scale);
                 }
-                updated = options(&ui, &mut state.wireframe);
-                updated = camera(&ui, &mut state.cam_slider);
+                updated |= options(&ui, &mut state.wireframe);
+                updated |= camera(&ui, &mut state.cam_slider);
             });
         self.imgui_glfw.draw(ui, window);
         updated
+    }
+
+    pub fn is_mouse_down(&mut self, window: &mut glfw::Window, button: imgui::MouseButton) -> bool {
+        let ui = self.imgui_glfw.frame(window, &mut self.imgui);
+
+        ui.is_mouse_down(button)
     }
 }
 

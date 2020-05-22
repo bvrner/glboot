@@ -40,14 +40,14 @@ where
             // 1. diffuse map
             if !mat.diffuse_texture.is_empty() {
                 text_vec.push((
-                    "diffuse".to_owned(),
+                    "material.diffuse".to_owned(),
                     Texture::new(&format!("{}/{}", dir, mat.diffuse_texture), false).unwrap(),
                 ));
             }
             // 2. specular map
             if !mat.specular_texture.is_empty() {
                 text_vec.push((
-                    "specular".to_owned(),
+                    "material.specular".to_owned(),
                     Texture::new(&format!("{}/{}", dir, mat.specular_texture), false).unwrap(),
                 ));
             }
@@ -55,7 +55,7 @@ where
             // normal map
             if !mat.normal_texture.is_empty() {
                 text_vec.push((
-                    "normal".to_owned(),
+                    "material.normal".to_owned(),
                     Texture::new(&format!("{}/{}", dir, mat.normal_texture), false).unwrap(),
                 ));
             }
@@ -95,6 +95,8 @@ where
                     } else {
                         vec2(0.0, 0.0)
                     },
+                    tangent: vec3(0.0, 0.0, 0.0),
+                    bitangent: vec3(0.0, 0.0, 0.0),
                 })
             }
 

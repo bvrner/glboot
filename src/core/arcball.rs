@@ -1,7 +1,7 @@
 use cgmath::{InnerSpace, Point2, Quaternion, Vector3};
 
 pub struct ArcBall {
-    window_dim: (f32, f32),
+    scales: (f32, f32),
     start: Point2<f32>,
     current: Point2<f32>,
     click_vec: Vector3<f32>,
@@ -12,7 +12,7 @@ pub struct ArcBall {
 impl ArcBall {
     pub fn new(width: f32, height: f32) -> Self {
         let mut ret = ArcBall {
-            window_dim: (0.0, 0.0),
+            scales: (0.0, 0.0),
             start: Point2::new(0.0, 0.0),
             current: Point2::new(0.0, 0.0),
             click_vec: Vector3::new(0.0, 0.0, 0.0),
@@ -25,8 +25,8 @@ impl ArcBall {
     }
 
     pub fn update(&mut self, width: f32, height: f32) {
-        self.window_dim.0 = 1.0 / ((width - 1.0) * 0.5);
-        self.window_dim.1 = 1.0 / ((height - 1.0) * 0.5);
+        self.scales.0 = 1.0 / ((width - 1.0) * 0.5);
+        self.scales.1 = 1.0 / ((height - 1.0) * 0.5);
     }
 
     pub fn click(&mut self, point: Point2<f32>) {
@@ -55,8 +55,8 @@ impl ArcBall {
     fn get_vector(&self) -> Vector3<f32> {
         let mut temp = self.current;
 
-        temp.x = (temp.x * self.window_dim.0) - 1.0;
-        temp.y = 1.0 - (temp.y * self.window_dim.1);
+        temp.x = (temp.x * self.scales.0) - 1.0;
+        temp.y = 1.0 - (temp.y * self.scales.1);
 
         let len = (temp.x * temp.x) + (temp.y * temp.y);
 

@@ -27,6 +27,7 @@ fn main() {
         gl::Enable(gl::CULL_FACE);
         gl::ClearColor(0.1, 0.1, 0.1, 1.0);
         gl::Clear(gl::COLOR_BUFFER_BIT);
+        gl::Enable(gl::MULTISAMPLE);
     }
 
     let mut program = ShaderProgram::from_files(v_path, f_path, None).unwrap();
@@ -48,6 +49,7 @@ fn main() {
     program.set_uniform("arc", Matrix4::identity());
 
     let mut arc = ArcBall::new(800.0, 600.0);
+    let events = window.events.take().unwrap();
     while !window.should_close() {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
@@ -81,21 +83,22 @@ fn main() {
                     * Matrix4::from_scale(gui_state.scale),
             );
         }
-        window.swap_buffers();
+        window.update();
 
         let point = window.get_cursor_pos();
-        window.process_events(|flow: &mut window::ControlFlow, event| {
+        for (_, event) in glfw::flush_messages(&events) {
             imgui.handle_event(&event);
-            match *event {
+
+            match event {
                 glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                    *flow = window::ControlFlow::Quit;
+                    window.set_should_close(true);
                 }
-                glfw::WindowEvent::MouseButton(glfw::MouseButtonLeft, Action::Press, _) => {
+                glfw::WindowEvent::MouseButton(glfw::MouseButtonRight, Action::Press, _) => {
                     let point = Point2::new(point.0 as f32, point.1 as f32);
                     // program.set_uniform("arc", Matrix4::from(arc.last_rotation));
                     arc.click(point);
                 }
-                glfw::WindowEvent::MouseButton(glfw::MouseButtonLeft, Action::Release, _) => {
+                glfw::WindowEvent::MouseButton(glfw::MouseButtonRight, Action::Release, _) => {
                     arc.is_on = false;
                 }
                 glfw::WindowEvent::CursorPos(x, y) => {
@@ -119,6 +122,6 @@ fn main() {
                 }
                 _ => {}
             }
-        });
+        }
     }
 }

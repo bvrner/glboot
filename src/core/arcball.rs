@@ -1,11 +1,21 @@
 use cgmath::{InnerSpace, Point2, Quaternion, Vector3};
 
 pub struct ArcBall {
+    // scaling factor to normalize coordinates to viewport
     scales: (f32, f32),
+    // the point the rotation started
     start: Point2<f32>,
+    // the point the rotation currently is
     current: Point2<f32>,
+    // the vector to the center of the ball when the click occurred
     click_vec: Vector3<f32>,
+    // the vector to the center of the ball when the drag occurred
     drag_vec: Vector3<f32>,
+    // current rotation
+    this_rot: Quaternion<f32>,
+    // last rotation
+    last_rot: Quaternion<f32>,
+    // is a drag occurring?
     pub is_on: bool,
 }
 
@@ -18,6 +28,8 @@ impl ArcBall {
             click_vec: Vector3::new(0.0, 0.0, 0.0),
             drag_vec: Vector3::new(0.0, 0.0, 0.0),
             is_on: false,
+            this_rot: Quaternion::new(1.0, 0.0, 0.0, 0.0),
+            last_rot: Quaternion::new(1.0, 0.0, 0.0, 0.0),
         };
         ret.update(width, height);
 
@@ -33,6 +45,7 @@ impl ArcBall {
         self.start = point;
         self.current = point;
         self.is_on = true;
+        self.this_rot = self.last_rot;
         self.click_vec = self.get_vector();
     }
 
@@ -42,22 +55,34 @@ impl ArcBall {
         }
         self.drag_vec = self.get_vector();
 
+        // get the axis of rotation by crossing the click and drag vectors
         let perp = self.click_vec.cross(self.drag_vec);
 
         self.start = self.current;
-        if perp.magnitude() > f32::EPSILON {
+        self.this_rot = if perp.magnitude() > f32::EPSILON {
+            // since both vectors are normalized their dor will give us the angle of rotation
             Quaternion::from_sv(self.click_vec.dot(self.drag_vec), perp)
         } else {
-            Quaternion::new(0.0, 0.0, 0.0, 0.0)
-        }
+            Quaternion::new(1.0, 0.0, 0.0, 0.0)
+        };
+        self.this_rot = self.this_rot * self.last_rot;
+        self.this_rot
     }
 
+    pub fn finish(&mut self) {
+        self.is_on = false;
+        self.last_rot = self.this_rot;
+    }
+
+    // get the current vector to the center of the ball
     fn get_vector(&self) -> Vector3<f32> {
         let mut temp = self.current;
 
+        // normalize the coordinates
         temp.x = (temp.x * self.scales.0) - 1.0;
         temp.y = 1.0 - (temp.y * self.scales.1);
 
+        // get the length of the vector
         let len = (temp.x * temp.x) + (temp.y * temp.y);
 
         if len > 1.0 {

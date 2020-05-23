@@ -43,7 +43,7 @@ uniform Material material;
 
 void main() {
     light.position = light_pos;
-    light.ambient = vec3(0.4, 0.4, 0.4);
+    light.ambient = vec3(0.2, 0.2, 0.2);
     light.diffuse = vec3(0.5, 0.5, 0.5);
     light.specular = vec3(1.0, 1.0, 1.0);
     light.constant = 1.0;

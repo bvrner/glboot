@@ -11,8 +11,8 @@ use glfw::{self, Action, Context, Key};
 fn main() {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
-    let v_path = format!("{}/shaders/vertex.glsl", root);
-    let f_path = format!("{}/shaders/frag.glsl", root);
+    let v_path = format!("{}/shaders/flatv.glsl", root);
+    let f_path = format!("{}/shaders/flatf.glsl", root);
     let m_path = format!("{}/models/backpack.obj", root);
 
     let mut window = Window::new("Bootstrap", (800, 600));
@@ -99,7 +99,8 @@ fn main() {
                     arc.click(point);
                 }
                 glfw::WindowEvent::MouseButton(glfw::MouseButtonRight, Action::Release, _) => {
-                    arc.is_on = false;
+                    // arc.is_on = false;
+                    arc.finish();
                 }
                 glfw::WindowEvent::CursorPos(x, y) => {
                     if arc.is_on {

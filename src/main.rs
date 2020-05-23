@@ -13,7 +13,7 @@ fn main() {
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let v_path = format!("{}/shaders/flatv.glsl", root);
     let f_path = format!("{}/shaders/flatf.glsl", root);
-    let m_path = format!("{}/models/backpack.obj", root);
+    let m_path = format!("{}/models/teapot.obj", root);
 
     let mut window = Window::new("Bootstrap", (800, 600));
     window.make_current();

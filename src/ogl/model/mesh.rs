@@ -56,14 +56,14 @@ impl Mesh {
     pub fn setup(&mut self) {
         // Compute the tangent and bitanget for each triangle on the mesh
         // I'll just trust no indice goes out of bounds
-        for vers in self.indices.chunks_exact_mut(3) {
-            let v0 = &self.vertices[vers[0] as usize].vertice;
-            let v1 = &self.vertices[vers[1] as usize].vertice;
-            let v2 = &self.vertices[vers[2] as usize].vertice;
+        for triangle in self.indices.chunks_exact_mut(3) {
+            let v0 = &self.vertices[triangle[0] as usize].vertice;
+            let v1 = &self.vertices[triangle[1] as usize].vertice;
+            let v2 = &self.vertices[triangle[2] as usize].vertice;
 
-            let uv0 = &self.vertices[vers[0] as usize].tex_coords;
-            let uv1 = &self.vertices[vers[1] as usize].tex_coords;
-            let uv2 = &self.vertices[vers[2] as usize].tex_coords;
+            let uv0 = &self.vertices[triangle[0] as usize].tex_coords;
+            let uv1 = &self.vertices[triangle[1] as usize].tex_coords;
+            let uv2 = &self.vertices[triangle[2] as usize].tex_coords;
 
             let delta1 = v1 - v0;
             let delta2 = v2 - v0;
@@ -76,13 +76,13 @@ impl Mesh {
             let tangent = (delta1 * deltau2.y - delta2 * deltau1.y) * r;
             let bitangent = (delta2 * deltau1.x - delta1 * deltau2.x) * r;
 
-            self.vertices[vers[0] as usize].tangent = tangent;
-            self.vertices[vers[1] as usize].tangent = tangent;
-            self.vertices[vers[2] as usize].tangent = tangent;
+            self.vertices[triangle[0] as usize].tangent = tangent;
+            self.vertices[triangle[1] as usize].tangent = tangent;
+            self.vertices[triangle[2] as usize].tangent = tangent;
 
-            self.vertices[vers[2] as usize].bitangent = bitangent;
-            self.vertices[vers[2] as usize].bitangent = bitangent;
-            self.vertices[vers[2] as usize].bitangent = bitangent;
+            self.vertices[triangle[0] as usize].bitangent = bitangent;
+            self.vertices[triangle[1] as usize].bitangent = bitangent;
+            self.vertices[triangle[2] as usize].bitangent = bitangent;
         }
 
         self.vbo = VertexBuffer::new(&self.vertices);

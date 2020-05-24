@@ -15,6 +15,7 @@ pub struct ImGUI {
 pub struct ImGuiState {
     pub colors: [f32; 3],
     pub wireframe: bool,
+    pub env: bool,
     pub cam_slider: f32,
     pub scale: f32,
 }
@@ -24,6 +25,7 @@ impl Default for ImGuiState {
         ImGuiState {
             colors: [0.5, 0.5, 0.5],
             wireframe: false,
+            env: true,
             cam_slider: 45.0,
             scale: 0.1,
         }
@@ -52,8 +54,9 @@ impl ImGUI {
             .size([300.0, 300.0], imgui::Condition::Once)
             .build(&ui, || {
                 if ui.collapsing_header(imgui::im_str!("Object")).build() {
-                    updated |= color_picker(&ui, &mut state.colors);
+                    // updated |= color_picker(&ui, &mut state.colors);
                     updated |= scale(&ui, &mut state.scale);
+                    updated |= env_option(&ui, &mut state.env);
                 }
                 updated |= options(&ui, &mut state.wireframe);
                 updated |= camera(&ui, &mut state.cam_slider);
@@ -75,6 +78,11 @@ fn color_picker(ui: &imgui::Ui, colors: &mut [f32; 3]) -> bool {
         .alpha(false)
         .display_rgb(true)
         .build(&ui)
+}
+
+#[inline]
+fn env_option(ui: &imgui::Ui, clicked: &mut bool) -> bool {
+    ui.checkbox(imgui::im_str!("Refaction|Reflection"), clicked)
 }
 
 #[inline]

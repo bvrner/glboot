@@ -1,8 +1,6 @@
-use glboot::core::{
-    arcball::ArcBall,
-    camera::Camera,
-    window::{self, Window},
-};
+//TODO refactor this whole mess
+
+use glboot::core::{arcball::ArcBall, camera::Camera, window::Window};
 use glboot::ogl::{
     buffers::{VertexArray, VertexBuffer},
     model::mesh::Model,

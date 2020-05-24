@@ -3,7 +3,12 @@ use glboot::core::{
     camera::Camera,
     window::{self, Window},
 };
-use glboot::ogl::{model::mesh::Model, program::ShaderProgram};
+use glboot::ogl::{
+    buffers::{VertexArray, VertexBuffer},
+    model::mesh::Model,
+    program::ShaderProgram,
+    texture::Texture,
+};
 
 use cgmath::{Matrix4, Point2, Point3, SquareMatrix, Vector3};
 use glfw::{self, Action, Context, Key};
@@ -14,11 +19,15 @@ fn main() {
     let v_path = format!("{}/shaders/flatv.glsl", root);
     let f_path = format!("{}/shaders/flatf.glsl", root);
     let m_path = format!("{}/models/teapot.obj", root);
+    let cv_path = format!("{}/shaders/cubev.glsl", root);
+    let cf_path = format!("{}/shaders/cubef.glsl", root);
 
     let mut window = Window::new("Bootstrap", (800, 600));
     window.make_current();
     window.load_gl();
+
     let mut imgui = glboot::ImGUI::new(&mut window);
+
     unsafe {
         gl::Enable(gl::BLEND);
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
@@ -31,10 +40,11 @@ fn main() {
     }
 
     let mut program = ShaderProgram::from_files(v_path, f_path, None).unwrap();
+    let mut cube_program = ShaderProgram::from_files(cv_path, cf_path, None).unwrap();
     let model = Model::load(m_path).unwrap();
 
     let mut gui_state = glboot::ImGuiState::default();
-    let camera = Camera::new(Point3::new(0.0, 0.5, 0.5), Vector3::new(0.0, -0.5, -0.5));
+    let camera = Camera::new(Point3::new(0.0, 0.3, 0.5), Vector3::new(0.0, -0.3, -0.5));
 
     program.set_uniform(
         "projection",
@@ -47,6 +57,38 @@ fn main() {
             * Matrix4::from_scale(gui_state.scale),
     );
     program.set_uniform("arc", Matrix4::identity());
+
+    let cubemap_vertices = [
+        -1.0_f32, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0,
+        -1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0,
+        1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0,
+        1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0,
+        -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
+    ];
+
+    let vbo = VertexBuffer::new(&cubemap_vertices);
+    let vao = VertexArray::new();
+    let layout = glboot::layout![(3, f32, gl::FLOAT)];
+    vao.add_buffer(&vbo, &layout);
+
+    let cubemap = Texture::cubemap(
+        &[
+            "assets/textures/right.jpg",
+            "assets/textures/left.jpg",
+            "assets/textures/top.jpg",
+            "assets/textures/bottom.jpg",
+            "assets/textures/front.jpg",
+            "assets/textures/back.jpg",
+        ],
+        false,
+    )
+    .unwrap();
+
+    cube_program.bind();
+    cube_program.set_uniform("skybox", 0);
+    cube_program.unbind();
 
     let mut arc = ArcBall::new(800.0, 600.0);
     let events = window.events.take().unwrap();
@@ -64,6 +106,33 @@ fn main() {
         }
 
         model.draw(&mut program);
+
+        vao.bind();
+        cube_program.bind();
+        let (w, h) = window.get_framebuffer_size();
+        cube_program.set_uniform("view", camera.get_matrix());
+        cube_program.set_uniform(
+            "projection",
+            cgmath::perspective(
+                cgmath::Deg(gui_state.cam_slider),
+                w as f32 / h as f32,
+                0.1_f32,
+                100f32,
+            ),
+        );
+        cube_program.send_uniforms();
+        cubemap.bind(0);
+        unsafe {
+            gl::DepthFunc(gl::LEQUAL);
+            gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
+            gl::DrawArrays(gl::TRIANGLES, 0, 36);
+            // gl::DepthMask(gl::TRUE);
+            gl::DepthFunc(gl::LESS);
+        }
+        vao.unbind();
+        cube_program.unbind();
+        // cubemap.unbind();
+
         if imgui.draw(&mut window, &mut gui_state) {
             program.set_uniform("col", Vector3::from(gui_state.colors));
 

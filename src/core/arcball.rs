@@ -3,8 +3,6 @@ use cgmath::{InnerSpace, Point2, Quaternion, Vector3};
 pub struct ArcBall {
     // scaling factor to normalize coordinates to viewport
     scales: (f32, f32),
-    // the point the rotation started
-    start: Point2<f32>,
     // the point the rotation currently is
     current: Point2<f32>,
     // the vector to the center of the ball when the click occurred
@@ -23,7 +21,6 @@ impl ArcBall {
     pub fn new(width: f32, height: f32) -> Self {
         let mut ret = ArcBall {
             scales: (0.0, 0.0),
-            start: Point2::new(0.0, 0.0),
             current: Point2::new(0.0, 0.0),
             click_vec: Vector3::new(0.0, 0.0, 0.0),
             drag_vec: Vector3::new(0.0, 0.0, 0.0),
@@ -42,7 +39,6 @@ impl ArcBall {
     }
 
     pub fn click(&mut self, point: Point2<f32>) {
-        self.start = point;
         self.current = point;
         self.is_on = true;
         self.this_rot = self.last_rot;
@@ -58,7 +54,6 @@ impl ArcBall {
         // get the axis of rotation by crossing the click and drag vectors
         let perp = self.click_vec.cross(self.drag_vec);
 
-        self.start = self.current;
         self.this_rot = if perp.magnitude() > f32::EPSILON {
             // since both vectors are normalized their dor will give us the angle of rotation
             Quaternion::from_sv(self.click_vec.dot(self.drag_vec), perp)

@@ -983,9 +983,9 @@ dependencies = [
 
 [[package]]
 name = "tobj"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42748fb67ae45bff1caad8ff18de46f85347b8e14caf2a29fa6b12d741e15fdb"
+checksum = "8c09266614653bb7668cff99f1631ca162844a1cd97afc601dc22fc9ba218bfd"
 
 [[package]]
 name = "unicode-width"

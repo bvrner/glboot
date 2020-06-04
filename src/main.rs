@@ -51,6 +51,7 @@ fn main() {
     );
     program.set_uniform("arc", Matrix4::identity());
 
+    // TODO use a model instead
     let cubemap_vertices = [
         -1.0_f32, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0,
         -1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0,
@@ -81,6 +82,7 @@ fn main() {
 
     cube_program.set_uniform("skybox", 0);
     program.set_uniform("skybox", 0);
+    cubemap.bind(0);
 
     let mut arc = ArcBall::new(800.0, 600.0);
     let events = window.events.take().unwrap();
@@ -97,7 +99,6 @@ fn main() {
             );
         }
 
-        cubemap.bind(0);
         model.draw(&mut program);
 
         vao.bind();

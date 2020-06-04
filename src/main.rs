@@ -14,16 +14,14 @@ use glfw::{self, Action, Context, Key};
 fn main() {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
-    let v_path = format!("{}/shaders/environv.glsl", root);
-    let f_path = format!("{}/shaders/environf.glsl", root);
+    let shader_path = format!("{}/shaders/environ.glsl", root);
     let m_path = format!("{}/models/backpack.obj", root);
-    let cv_path = format!("{}/shaders/cubev.glsl", root);
-    let cf_path = format!("{}/shaders/cubef.glsl", root);
+    let cube_path = format!("{}/shaders/cube.glsl", root);
 
     let (mut window, mut imgui) = setup();
 
-    let mut program = ShaderProgram::from_files(v_path, f_path, None).unwrap();
-    let mut cube_program = ShaderProgram::from_files(cv_path, cf_path, None).unwrap();
+    let mut program = ShaderProgram::from_file(shader_path).unwrap();
+    let mut cube_program = ShaderProgram::from_file(cube_path).unwrap();
     let model = Model::load(m_path).unwrap();
 
     let mut gui_state = glboot::ImGuiState::default();

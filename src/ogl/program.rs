@@ -1,5 +1,5 @@
 use super::shaders::{Shader, ShaderError, ShaderKind};
-use std::{collections::HashMap, ffi::CString, io::Read, path::Path, ptr};
+use std::{collections::HashMap, ffi::CString, fs::File, io::Read, path::Path, ptr};
 
 use gl::types::*;
 
@@ -22,6 +22,19 @@ pub enum Uniform {
 }
 
 impl ShaderProgram {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, ShaderError> {
+        let src = {
+            let mut file = File::open(path)?;
+            let mut src = String::new();
+
+            file.read_to_string(&mut src)?;
+            src
+        };
+
+        let (v, f, g) = process_all(src)?;
+        Self::from_shaders(v, f, g)
+    }
+
     pub fn from_files<P: AsRef<Path>>(
         v_path: P,
         f_path: P,
@@ -140,6 +153,39 @@ fn check_program_status(program: GLuint, which: GLenum) -> Result<(), ShaderErro
             Err(ShaderError::Other(info_log))
         }
     }
+}
+
+// this works but it's kinda slow, TODO optmize and properly deal with errors
+fn process_all(src: String) -> Result<(Shader, Shader, Option<Shader>), ShaderError> {
+    const V_BEGIN_MARK: &str = "#begin vertex";
+    const F_BEGIN_MARK: &str = "#begin fragment";
+    // const G_BEGIN_MARK: &str = "#begin geometry";
+
+    const V_END_MARK: &str = "#end vertex";
+    const F_END_MARK: &str = "#end fragment";
+    // const G_END_MARK: &str = "#end geometry";
+
+    // ugly, TODO refactor
+    let (v_begin, v_end) = (
+        src.find(V_BEGIN_MARK).unwrap(),
+        src.find(V_END_MARK).unwrap(),
+    );
+    let (f_begin, f_end) = (
+        src.find(F_BEGIN_MARK).unwrap(),
+        src.find(F_END_MARK).unwrap(),
+    );
+    // let (g_begin, g_end) = (src.find(G_BEGIN_MARK).unwrap(), src.find(G_END_MARK).unwrap());
+
+    let v_shader = Shader::from_source(
+        &src[(v_begin + V_BEGIN_MARK.len())..v_end],
+        ShaderKind::Vertex,
+    )?;
+    let f_shader = Shader::from_source(
+        &src[(f_begin + F_BEGIN_MARK.len())..f_end],
+        ShaderKind::Fragment,
+    )?;
+
+    Ok((v_shader, f_shader, None))
 }
 
 impl Drop for ShaderProgram {

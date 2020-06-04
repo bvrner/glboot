@@ -53,7 +53,7 @@ impl ImGUI {
         imgui::Window::new(imgui::im_str!("Playground"))
             .size([300.0, 300.0], imgui::Condition::Once)
             .build(&ui, || {
-                if ui.collapsing_header(imgui::im_str!("Object")).build() {
+                if imgui::CollapsingHeader::new(imgui::im_str!("Object")).build(&ui) {
                     // updated |= color_picker(&ui, &mut state.colors);
                     updated |= scale(&ui, &mut state.scale);
                     updated |= env_option(&ui, &mut state.env);
@@ -72,22 +72,22 @@ impl ImGUI {
     }
 }
 
-#[inline]
-fn color_picker(ui: &imgui::Ui, colors: &mut [f32; 3]) -> bool {
-    imgui::ColorPicker::new(imgui::im_str!("Pick a Color"), colors)
-        .alpha(false)
-        .display_rgb(true)
-        .build(&ui)
-}
+// #[inline]
+// fn color_picker(ui: &imgui::Ui, colors: &mut [f32; 3]) -> bool {
+//     imgui::ColorPicker::new(imgui::im_str!("Pick a Color"), colors)
+//         .alpha(false)
+//         .display_rgb(true)
+//         .build(&ui)
+// }
 
 #[inline]
 fn env_option(ui: &imgui::Ui, clicked: &mut bool) -> bool {
-    ui.checkbox(imgui::im_str!("Refaction|Reflection"), clicked)
+    ui.checkbox(imgui::im_str!("Refraction|Reflection"), clicked)
 }
 
 #[inline]
 fn options(ui: &imgui::Ui, clicked: &mut bool) -> bool {
-    if ui.collapsing_header(imgui::im_str!("Options")).build() {
+    if imgui::CollapsingHeader::new(imgui::im_str!("Options")).build(ui) {
         ui.checkbox(imgui::im_str!("Wireframe"), clicked)
     } else {
         false
@@ -96,7 +96,7 @@ fn options(ui: &imgui::Ui, clicked: &mut bool) -> bool {
 
 #[inline]
 fn camera(ui: &imgui::Ui, fov: &mut f32) -> bool {
-    if ui.collapsing_header(imgui::im_str!("Camera")).build() {
+    if imgui::CollapsingHeader::new(imgui::im_str!("Camera")).build(ui) {
         imgui::Slider::new(imgui::im_str!("FOV"), 0.1..=90.0).build(&ui, fov)
     } else {
         false

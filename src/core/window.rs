@@ -2,13 +2,15 @@
 // use glfw::WindowHint;
 use glfw::{Context, WindowHint};
 use std::{
+    mem::ManuallyDrop,
     ops::{Deref, DerefMut},
     sync::mpsc::Receiver,
 };
 
 pub struct Window {
-    win: glfw::Window,
-    pub glfw: glfw::Glfw, // needed to guarantee GLFW isn't terminated before everything else is droped
+    // if glfw is droped before the window we will panic
+    pub glfw: ManuallyDrop<glfw::Glfw>,
+    win: ManuallyDrop<glfw::Window>,
     pub events: Option<Receiver<(f64, glfw::WindowEvent)>>,
 }
 
@@ -33,8 +35,8 @@ impl Window {
         win.set_all_polling(true);
         win.set_sticky_keys(true);
         Window {
-            win,
-            glfw,
+            win: ManuallyDrop::new(win),
+            glfw: ManuallyDrop::new(glfw),
             events: Some(events),
         }
     }
@@ -78,5 +80,14 @@ impl Deref for Window {
 impl DerefMut for Window {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.win
+    }
+}
+
+impl Drop for Window {
+    fn drop(&mut self) {
+        unsafe {
+            ManuallyDrop::drop(&mut self.win);
+            ManuallyDrop::drop(&mut self.glfw);
+        }
     }
 }

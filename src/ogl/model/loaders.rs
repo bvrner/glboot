@@ -5,9 +5,9 @@ use cgmath::{vec2, vec3};
 use rayon::prelude::*;
 
 use std::{
-    error::Error,
+    // error::Error,
     fmt::Debug,
-    path::{Path, PathBuf},
+    path::Path,
     sync::Arc,
 };
 
@@ -110,7 +110,9 @@ where
         })
         .collect();
 
+    // OpenGL doesn't like when we do it inside the parallel iterator
     meshs.iter_mut().for_each(|m| m.setup());
+
     Ok(Model {
         name: String::new(),
         meshs,

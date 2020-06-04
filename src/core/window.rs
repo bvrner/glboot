@@ -41,6 +41,25 @@ impl Window {
         }
     }
 
+    pub fn hidden(name: &str, dimensions: (u32, u32)) -> Self {
+        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+
+        glfw.window_hint(WindowHint::ContextVersion(3, 3));
+        glfw.window_hint(WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
+        glfw.window_hint(WindowHint::Samples(Some(4)));
+        glfw.window_hint(WindowHint::Visible(false));
+
+        let (win, events) = glfw
+            .create_window(dimensions.0, dimensions.1, name, glfw::WindowMode::Windowed)
+            .unwrap();
+
+        Window {
+            win: ManuallyDrop::new(win),
+            glfw: ManuallyDrop::new(glfw),
+            events: Some(events),
+        }
+    }
+
     #[inline]
     pub fn load_gl(&mut self) {
         gl::load_with(|s| self.win.get_proc_address(s) as *const _);

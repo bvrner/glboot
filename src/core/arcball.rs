@@ -46,21 +46,20 @@ impl ArcBall {
     }
 
     pub fn drag(&mut self, point: Point2<f32>) -> Quaternion<f32> {
-        if self.is_on {
-            self.current = point;
-        }
+        self.current = point;
+
         self.drag_vec = self.get_vector();
 
         // get the axis of rotation by crossing the click and drag vectors
         let perp = self.click_vec.cross(self.drag_vec);
 
-        self.this_rot = if perp.magnitude() > f32::EPSILON {
-            // since both vectors are normalized their dor will give us the angle of rotation
-            Quaternion::from_sv(self.click_vec.dot(self.drag_vec), perp)
-        } else {
-            Quaternion::new(1.0, 0.0, 0.0, 0.0)
-        };
-        self.this_rot = self.this_rot * self.last_rot;
+        self.this_rot = self.last_rot
+            * if perp.magnitude() > f32::EPSILON {
+                // since both vectors are normalized their dor will give us the angle of rotation
+                Quaternion::from_sv(self.click_vec.dot(self.drag_vec), perp)
+            } else {
+                Quaternion::new(0.0, 0.0, 0.0, 0.0)
+            };
         self.this_rot
     }
 
@@ -81,9 +80,7 @@ impl ArcBall {
         let len = (temp.x * temp.x) + (temp.y * temp.y);
 
         if len > 1.0 {
-            let norm = 1.0 / len.sqrt();
-
-            Vector3::new(temp.x * norm, temp.y * norm, 0.0)
+            Vector3::new(temp.x, temp.y, 0.0).normalize()
         } else {
             Vector3::new(temp.x, temp.y, (1.0 - len).sqrt())
         }

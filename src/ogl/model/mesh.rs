@@ -107,11 +107,19 @@ impl Mesh {
             }
         }
 
+        // TODO send multiple uniforms with one call
+        // OR use uniform buffers instead
         if let Some(ref material) = self.material {
+            shader.set_uniform("material.has_specular", 1);
+            shader.set_uniform("material.has_diffuse", 1);
+
             shader.set_uniform("material.ambient", material.ambient);
             shader.set_uniform("material.shininess", material.shininess);
             shader.set_uniform("material.specular", material.specular);
             shader.set_uniform("material.diffuse", material.diffuse);
+        } else {
+            shader.set_uniform("material.has_specular", 0);
+            shader.set_uniform("material.has_diffuse", 0);
         }
 
         shader.bind();

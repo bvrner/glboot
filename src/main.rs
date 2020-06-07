@@ -15,7 +15,7 @@ fn main() {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let shader_path = format!("{}/shaders/flat.glsl", root);
-    let m_path = format!("{}/models/backpack/backpack.obj", root);
+    let m_path = format!("{}/models/dragon.obj", root);
 
     let (mut window, mut imgui) = setup();
 

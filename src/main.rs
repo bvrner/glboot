@@ -14,8 +14,8 @@ use glfw::{self, Action, Context, Key};
 fn main() {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
-    let shader_path = format!("{}/shaders/flat.glsl", root);
-    let m_path = format!("{}/models/dragon.obj", root);
+    let shader_path = format!("{}/shaders/basic_ads.glsl", root);
+    let m_path = format!("{}/models/teapot.obj", root);
 
     let (mut window, mut imgui) = setup();
 
@@ -31,11 +31,7 @@ fn main() {
         cgmath::perspective(cgmath::Deg(45.0_f32), 800.0 / 600.0, 0.1_f32, 100f32),
     );
     program.set_uniform("view", camera.get_matrix());
-    program.set_uniform(
-        "model",
-        Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0))
-            * Matrix4::from_scale(gui_state.scale),
-    );
+    program.set_uniform("model", Matrix4::from_scale(gui_state.scale));
     program.set_uniform("arc", Matrix4::identity());
 
     let mut arc = ArcBall::new(800.0, 600.0);
@@ -68,11 +64,7 @@ fn main() {
 
             program.set_uniform("refraction", gui_state.env as i32);
             program.set_uniform("projection", proj);
-            program.set_uniform(
-                "model",
-                Matrix4::from_translation(Vector3::new(0.0, 0.0, 0.0))
-                    * Matrix4::from_scale(gui_state.scale),
-            );
+            program.set_uniform("model", Matrix4::from_scale(gui_state.scale));
         }
         window.update();
 

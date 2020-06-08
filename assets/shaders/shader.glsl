@@ -17,7 +17,7 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform mat4 arc;
 void main() {
-    mat4 nmodel = model * arc;
+    mat4 nmodel = arc * model;
 
     vec3 T = normalize(vec3(nmodel * vec4(aTang, 0.0)));
     vec3 B = normalize(vec3(nmodel * vec4(aBitang, 0.0)));

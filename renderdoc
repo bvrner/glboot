@@ -11,7 +11,7 @@
                 "variable": "CARGO_MANIFEST_DIR"
             }
         ],
-        "executable": "/home/fenrir/Projetos/Rust/glboot/target/debug/glboot",
+        "executable": "/home/fenrir/Projetos/Rust/glboot/target/release/glboot",
         "inject": false,
         "numQueuedFrames": 0,
         "options": {

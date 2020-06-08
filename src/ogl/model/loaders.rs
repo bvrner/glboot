@@ -1,7 +1,8 @@
-use super::mesh::{Material, Mesh, Model, Vertex};
+use super::mesh::{Material, Mesh, Model};
 use crate::ogl::texture::Texture;
-use cgmath::{vec2, vec3};
+use cgmath::{vec2, vec3, Vector2, Vector3};
 
+use super::{RawVertex, VertexData};
 use rayon::prelude::*;
 
 use std::{
@@ -18,7 +19,7 @@ pub enum LoaderError {
     FileError,
 }
 
-pub fn load_obj<P>(path: P) -> Result<Model, String>
+pub fn load_obj<P, V: VertexData + Send>(path: P) -> Result<Model<V>, String>
 where
     P: AsRef<Path> + Debug,
 {
@@ -64,41 +65,28 @@ where
         },
     );
 
-    let mut meshs: Vec<Mesh> = models
+    let mut meshs: Vec<Mesh<V>> = models
         .into_par_iter()
         .map(|model| {
             let mesh = model.mesh;
-            let num_vertices = mesh.positions.len() / 3;
 
-            // data to fill
-            let mut vertices: Vec<Vertex> = Vec::with_capacity(num_vertices);
             let indices: Vec<u32> = mesh.indices;
 
-            let (p, n, t) = (mesh.positions, mesh.normals, mesh.texcoords);
+            let raw = {
+                let (p, n, t) = (mesh.positions, mesh.normals, mesh.texcoords);
 
-            // I'm sure that there's a smarter way to do this
-            // but all my approaches were slower in the benchs
-            for i in 0..num_vertices {
-                vertices.push(Vertex {
-                    vertice: if !p.is_empty() {
-                        vec3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
-                    } else {
-                        vec3(0.0, 0.0, 0.0)
-                    },
-                    normal: if !n.is_empty() {
-                        vec3(n[i * 3], n[i * 3 + 1], n[i * 3 + 2])
-                    } else {
-                        vec3(0.0, 0.0, 0.0)
-                    },
-                    tex_coords: if !t.is_empty() {
-                        vec2(t[i * 2], t[i * 2 + 1])
-                    } else {
-                        vec2(0.0, 0.0)
-                    },
-                    tangent: vec3(0.0, 0.0, 0.0),
-                    bitangent: vec3(0.0, 0.0, 0.0),
-                })
-            }
+                let v: Vec<Vector3<f32>> =
+                    p.chunks_exact(3).map(|p| vec3(p[0], p[1], p[2])).collect();
+                let n: Vec<Vector3<f32>> =
+                    n.chunks_exact(3).map(|p| vec3(p[0], p[1], p[2])).collect();
+                let t: Vec<Vector2<f32>> = t.chunks_exact(2).map(|p| vec2(p[0], p[1])).collect();
+
+                RawVertex {
+                    vertices: v,
+                    normals: n,
+                    tex_coords: t,
+                }
+            };
 
             let (material, texture) = if let Some(index) = mesh.material_id {
                 (Some(materials[index]), Some(textures[index].clone()))
@@ -106,7 +94,7 @@ where
                 (None, None)
             };
 
-            Mesh::new(vertices, texture, indices, material)
+            Mesh::new(V::from_raw(raw), texture, indices, material)
         })
         .collect();
 

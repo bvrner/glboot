@@ -3,6 +3,7 @@ use gl::types::*;
 use image::{DynamicImage, GenericImageView};
 use std::{convert::TryInto, ffi::c_void, path::Path};
 
+// (texture id, texture kind)
 #[derive(Debug)]
 pub struct Texture(GLuint, GLuint);
 
@@ -58,6 +59,8 @@ impl Texture {
         }
     }
 
+    /// Create a cubemap from a list of paths to the textures.
+    /// This assumes a specific order for the paths: right, left, top, bottom, front and back.
     pub fn cubemap<P: AsRef<Path>>(paths: &[P], flip: bool) -> image::ImageResult<Texture> {
         unsafe {
             let mut texture: GLuint = 0;

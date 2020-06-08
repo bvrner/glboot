@@ -4,6 +4,7 @@ use glboot::core::{arcball::ArcBall, camera::Camera, window::Window};
 use glboot::ogl::{
     // buffers::{VertexArray, VertexBuffer},
     model::mesh::Model,
+    model::NormVertex,
     program::ShaderProgram,
     // texture::Texture,
 };
@@ -21,7 +22,7 @@ fn main() {
 
     let mut program = ShaderProgram::from_file(shader_path).unwrap();
 
-    let model = Model::load(m_path).unwrap();
+    let model: Model<NormVertex> = Model::load(m_path).unwrap();
 
     let mut gui_state = glboot::ImGuiState::default();
     let camera = Camera::new(Point3::new(0.0, 0.3, 0.5), Vector3::new(0.0, -0.3, -0.5));

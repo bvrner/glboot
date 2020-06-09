@@ -105,5 +105,5 @@ fn camera(ui: &imgui::Ui, fov: &mut f32) -> bool {
 
 #[inline]
 fn scale(ui: &imgui::Ui, scale: &mut f32) -> bool {
-    imgui::Slider::new(imgui::im_str!("Scale"), 0.1..=1.0).build(&ui, scale)
+    imgui::Slider::new(imgui::im_str!("Scale"), 0.000000001..=1.0).build(&ui, scale)
 }

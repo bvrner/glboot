@@ -15,8 +15,9 @@ use glfw::{self, Action, Context, Key};
 fn main() {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
-    let shader_path = format!("{}/shaders/flat.glsl", root);
-    let m_path = format!("{}/models/Triangle.gltf", root);
+    let shader_path = format!("{}/shaders/flattex.glsl", root);
+    let m_path = format!("{}/models/matilda/scene.gltf", root);
+    // let m_path = format!("{}/models/tests/BoxTextured.gltf", root);
 
     let (mut window, mut imgui) = setup();
 
@@ -52,21 +53,21 @@ fn main() {
 
         model.draw(&mut program);
 
-        if imgui.draw(&mut window, &mut gui_state) {
-            program.set_uniform("col", Vector3::from(gui_state.colors));
+        // if imgui.draw(&mut window, &mut gui_state) {
+        //     program.set_uniform("col", Vector3::from(gui_state.colors));
 
-            let (w, h) = window.get_framebuffer_size();
-            let proj = cgmath::perspective(
-                cgmath::Deg(gui_state.cam_slider),
-                w as f32 / h as f32,
-                0.1_f32,
-                100f32,
-            );
+        //     let (w, h) = window.get_framebuffer_size();
+        //     let proj = cgmath::perspective(
+        //         cgmath::Deg(gui_state.cam_slider),
+        //         w as f32 / h as f32,
+        //         0.1_f32,
+        //         100f32,
+        //     );
 
-            program.set_uniform("refraction", gui_state.env as i32);
-            program.set_uniform("projection", proj);
-            program.set_uniform("model", Matrix4::from_scale(gui_state.scale));
-        }
+        //     program.set_uniform("refraction", gui_state.env as i32);
+        //     program.set_uniform("projection", proj);
+        //     program.set_uniform("model", Matrix4::from_scale(gui_state.scale));
+        // }
         window.update();
 
         for (_, event) in glfw::flush_messages(&events) {

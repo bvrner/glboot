@@ -156,6 +156,7 @@ fn process_node<V: VertexData>(
             let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
             let gltf_material = primitive.material();
 
+            // BIG TODO: REFACTOR TEXTURE LOADING INTO FUNCTIONS
             if let Some(normal_tex) = gltf_material.normal_texture() {
                 if let Some(tex) = reader.read_tex_coords(normal_tex.tex_coord()) {
                     raw.tex_coords
@@ -164,13 +165,33 @@ fn process_node<V: VertexData>(
                 // TODO implement From<gltf::Texture> for glboot::Texture
                 let data = &images[normal_tex.texture().index()];
                 textures.push((
-                    "normal",
+                    "material.normal_tex".to_owned(),
                     Texture::from_bytes(
                         &data.pixels,
                         data.width as i32,
                         data.height as i32,
                         gl::RGBA, // TODO use the data specified format
-                    ),
+                    )
+                    .unwrap(),
+                ));
+            }
+
+            if let Some(base_color) = gltf_material.pbr_metallic_roughness().base_color_texture() {
+                if let Some(tex) = reader.read_tex_coords(base_color.tex_coord()) {
+                    raw.tex_coords
+                        .extend(tex.into_f32().map(|t| Vector2::from(t)));
+                }
+
+                let data = &images[base_color.texture().index()];
+                textures.push((
+                    "material.diffuse_tex".to_owned(),
+                    Texture::from_bytes(
+                        &data.pixels,
+                        data.width as i32,
+                        data.height as i32,
+                        gl::RGBA, // TODO use the data specified format
+                    )
+                    .unwrap(),
                 ));
             }
 
@@ -180,10 +201,10 @@ fn process_node<V: VertexData>(
             if let Some(norm) = reader.read_normals() {
                 raw.normals.extend(norm.map(|n| Vector3::from(n)));
             }
-            if let Some(tex) = reader.read_tex_coords(0) {
-                raw.tex_coords
-                    .extend(tex.into_f32().map(|t| Vector2::from(t)));
-            }
+            // if let Some(tex) = reader.read_tex_coords(0) {
+            //     raw.tex_coords
+            //         .extend(tex.into_f32().map(|t| Vector2::from(t)));
+            // }
             // if let Some(tex) = reader.read_tex_coords(1) {
             //     tex_coords.extend(tex.into_f32().map(|t| Vector2::from(t)));
             // }
@@ -193,7 +214,7 @@ fn process_node<V: VertexData>(
             }
         }
 
-        Mesh::new(V::from_raw(raw), None, indices, None)
+        Mesh::new(V::from_raw(raw), Some(Arc::new(textures)), indices, None)
     })
     // unimplemented!()
 }

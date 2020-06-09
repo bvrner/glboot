@@ -53,14 +53,12 @@ pub struct Mesh<V: VertexData> {
 impl<V: VertexData> Mesh<V> {
     pub fn new(
         vertices: Vec<V>,
-        // textures: Option<Arc<Vec<(String, Texture)>>>, // god I love generics syntax
         indices: Vec<u32>,
         material: Option<usize>,
         default_transform: cgmath::Matrix4<f32>,
     ) -> Self {
         Mesh {
             vertices,
-            // textures,
             indices,
             material,
             default_transform,

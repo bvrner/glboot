@@ -16,9 +16,7 @@ fn main() {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let shader_path = format!("{}/shaders/flattex.glsl", root);
-    // let m_path = format!("{}/models/matilda/scene.gltf", root);
-    // let m_path = format!("{}/models/tests/Duck.gltf", root);
-    let m_path = format!("{}/models/simpler_dragon.glb", root);
+    let m_path = format!("{}/models/matilda/scene.gltf", root);
 
     let (mut window, mut imgui) = setup();
 
@@ -27,14 +25,14 @@ fn main() {
     let model: Model<StandardVertex> = Model::load(m_path).unwrap();
 
     let mut gui_state = glboot::ImGuiState::default();
-    let camera = Camera::new(Point3::new(0.0, 0.3, 0.5), Vector3::new(0.0, -0.3, -0.5));
+    let mut camera = Camera::new(Point3::new(0.0, 1.0, 1.0), Vector3::new(0.0, 0.0, -1.0));
 
     program.set_uniform(
         "projection",
         cgmath::perspective(cgmath::Deg(45.0_f32), 800.0 / 600.0, 0.1_f32, 100f32),
     );
     program.set_uniform("view", camera.get_matrix());
-    program.set_uniform("model", Matrix4::from_scale(gui_state.scale));
+    program.set_uniform("model", Matrix4::from_scale(0.0000001));
     program.set_uniform("arc", Matrix4::identity());
 
     let mut arc = ArcBall::new(800.0, 600.0);
@@ -54,21 +52,25 @@ fn main() {
 
         model.draw(&mut program);
 
-        // if imgui.draw(&mut window, &mut gui_state) {
-        //     program.set_uniform("col", Vector3::from(gui_state.colors));
+        if imgui.draw(&mut window, &mut gui_state) {
+            program.set_uniform("col", Vector3::from(gui_state.colors));
 
-        //     let (w, h) = window.get_framebuffer_size();
-        //     let proj = cgmath::perspective(
-        //         cgmath::Deg(gui_state.cam_slider),
-        //         w as f32 / h as f32,
-        //         0.1_f32,
-        //         100f32,
-        //     );
+            let (w, h) = window.get_framebuffer_size();
+            let proj = cgmath::perspective(
+                cgmath::Deg(gui_state.cam_slider),
+                w as f32 / h as f32,
+                0.1_f32,
+                100f32,
+            );
 
-        //     program.set_uniform("refraction", gui_state.env as i32);
-        //     program.set_uniform("projection", proj);
-        //     program.set_uniform("model", Matrix4::from_scale(gui_state.scale));
-        // }
+            program.set_uniform("refraction", gui_state.env as i32);
+            program.set_uniform("projection", proj);
+            program.set_uniform(
+                "model",
+                Matrix4::from_scale(gui_state.scale)
+                    * Matrix4::from_translation(Vector3::new(0.0, -0.5, 0.0)),
+            );
+        }
         window.update();
 
         for (_, event) in glfw::flush_messages(&events) {
@@ -78,6 +80,24 @@ fn main() {
                 glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
                     window.set_should_close(true);
                 }
+                glfw::WindowEvent::Key(Key::W, _, Action::Press, _) => {
+                    camera.pos += 2.5 * camera.front;
+                    program.set_uniform("view", camera.get_matrix());
+                }
+                glfw::WindowEvent::Key(Key::Space, _, Action::Press, _) => {
+                    camera.pos += 2.5 * camera.up;
+                    program.set_uniform("view", camera.get_matrix());
+                }
+                // glfw::WindowEvent::Key(Key::A, _, Action::Press, _) => {
+                //     window.set_should_close(true);
+                // }
+                glfw::WindowEvent::Key(Key::S, _, Action::Press, _) => {
+                    camera.pos -= 2.5 * camera.front;
+                    program.set_uniform("view", camera.get_matrix());
+                }
+                // glfw::WindowEvent::Key(Key::D, _, Action::Press, _) => {
+                //     camera.pos += 2.5 * camera.front;
+                // }
                 glfw::WindowEvent::MouseButton(glfw::MouseButtonRight, Action::Press, _) => {
                     let point = window.get_cursor_pos();
                     arc.click(Point2::new(point.0 as f32, point.1 as f32));

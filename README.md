@@ -9,6 +9,10 @@ Since everything here is experimental it's not really meant to be published or u
 
 ## Screenshots
 This is very much a work in progress, but seeing how things are is nice, so I'll put some screenshots from times to times.
+
+![matilda](https://github.com/bvrner/glboot/blob/master/shots/matilda.png)
+Amazing model by [nicolekeane](https://sketchfab.com/3d-models/matilda-7ddedfb652bd4ea091bc3de27f98fc02)
+
 ![pot](https://github.com/bvrner/glboot/blob/master/shots/refl_pot.png)
 
 ![back](https://github.com/bvrner/glboot/blob/master/shots/backpack.png)

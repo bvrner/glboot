@@ -3,13 +3,11 @@ use crate::ogl::texture::Texture;
 use cgmath::{vec2, vec3, Vector2, Vector3};
 
 use super::{RawVertex, VertexData};
-use rayon::prelude::*;
 
 use std::{
     // error::Error,
     fmt::Debug,
     path::Path,
-    sync::Arc,
 };
 
 // TODO General error type for all handlers

@@ -16,8 +16,9 @@ fn main() {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let shader_path = format!("{}/shaders/flattex.glsl", root);
-    let m_path = format!("{}/models/matilda/scene.gltf", root);
-    // let m_path = format!("{}/models/tests/BoxTextured.gltf", root);
+    // let m_path = format!("{}/models/matilda/scene.gltf", root);
+    // let m_path = format!("{}/models/tests/Duck.gltf", root);
+    let m_path = format!("{}/models/simpler_dragon.glb", root);
 
     let (mut window, mut imgui) = setup();
 

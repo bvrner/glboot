@@ -1,4 +1,4 @@
-use std::{fmt::Debug, path::Path, sync::Arc};
+use std::{fmt::Debug, path::Path};
 
 use crate::ogl::{
     buffers::{array::VertexArray, index::IndexBuffer, vertex::VertexBuffer},
@@ -8,22 +8,43 @@ use crate::ogl::{
 
 use super::VertexData;
 
-use cgmath::Vector3;
+use cgmath::Vector4;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Material {
-    pub ambient: Vector3<f32>,
-    pub diffuse: Vector3<f32>,
-    pub specular: Vector3<f32>,
-    pub shininess: f32,
+    pub base_color: Vector4<f32>,
+    pub base_tex: Option<usize>,
+
+    pub metallic: f32,
+    pub roughness: f32,
+    pub metallic_tex: Option<usize>,
+
+    pub normal: Option<usize>,
+    pub occlusion_tex: Option<usize>,
+    pub occlusion_str: f32,
 }
 
-#[derive(Debug, Default)]
+impl Default for Material {
+    fn default() -> Self {
+        Material {
+            base_color: Vector4::new(1.0, 1.0, 1.0, 1.0),
+            base_tex: None,
+            metallic: 1.0,
+            roughness: 0.0,
+            metallic_tex: None,
+            normal: None,
+            occlusion_tex: None,
+            occlusion_str: 1.0,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Mesh<V: VertexData> {
     pub vertices: Vec<V>,
-    pub textures: Option<Arc<Vec<(String, Texture)>>>,
     pub indices: Vec<u32>,
-    pub material: Option<Material>,
+    pub material: Option<usize>,
+    pub default_transform: cgmath::Matrix4<f32>,
     vbo: VertexBuffer,
     ibo: IndexBuffer,
     vao: VertexArray,
@@ -32,15 +53,17 @@ pub struct Mesh<V: VertexData> {
 impl<V: VertexData> Mesh<V> {
     pub fn new(
         vertices: Vec<V>,
-        textures: Option<Arc<Vec<(String, Texture)>>>, // god I love generics syntax
+        // textures: Option<Arc<Vec<(String, Texture)>>>, // god I love generics syntax
         indices: Vec<u32>,
-        material: Option<Material>,
+        material: Option<usize>,
+        default_transform: cgmath::Matrix4<f32>,
     ) -> Self {
         Mesh {
             vertices,
-            textures,
+            // textures,
             indices,
             material,
+            default_transform,
             vbo: VertexBuffer::default(),
             ibo: IndexBuffer::default(),
             vao: VertexArray::default(),
@@ -48,37 +71,6 @@ impl<V: VertexData> Mesh<V> {
     }
 
     pub fn setup(&mut self) {
-        // Compute the tangent and bitanget for each triangle on the mesh
-        // I'll just trust no indice goes out of bounds
-        // for triangle in self.indices.chunks_exact_mut(3) {
-        //     let v0 = &self.vertices[triangle[0] as usize].vertice;
-        //     let v1 = &self.vertices[triangle[1] as usize].vertice;
-        //     let v2 = &self.vertices[triangle[2] as usize].vertice;
-
-        //     let uv0 = &self.vertices[triangle[0] as usize].tex_coords;
-        //     let uv1 = &self.vertices[triangle[1] as usize].tex_coords;
-        //     let uv2 = &self.vertices[triangle[2] as usize].tex_coords;
-
-        //     let delta1 = v1 - v0;
-        //     let delta2 = v2 - v0;
-
-        //     let deltau1 = uv1 - uv0;
-        //     let deltau2 = uv2 - uv0;
-
-        //     let r = 1.0 / (deltau1.x * deltau2.y - deltau1.y * deltau2.x);
-
-        //     let tangent = (delta1 * deltau2.y - delta2 * deltau1.y) * r;
-        //     let bitangent = (delta2 * deltau1.x - delta1 * deltau2.x) * r;
-
-        //     self.vertices[triangle[0] as usize].tangent = tangent;
-        //     self.vertices[triangle[1] as usize].tangent = tangent;
-        //     self.vertices[triangle[2] as usize].tangent = tangent;
-
-        //     self.vertices[triangle[0] as usize].bitangent = bitangent;
-        //     self.vertices[triangle[1] as usize].bitangent = bitangent;
-        //     self.vertices[triangle[2] as usize].bitangent = bitangent;
-        // }
-
         self.vbo = VertexBuffer::new(&self.vertices);
         self.ibo = IndexBuffer::new(&self.indices);
         self.vao = VertexArray::new();
@@ -87,27 +79,22 @@ impl<V: VertexData> Mesh<V> {
         self.vao.add_buffer(&self.vbo, &layout);
     }
 
-    pub fn draw(&self, shader: &mut ShaderProgram) {
-        if let Some(ref textures) = self.textures {
-            for (index, (name, tex)) in textures.iter().enumerate() {
-                shader.set_uniform(&name, index as i32);
-                tex.bind(index as u32);
+    fn draw(&self, shader: &mut ShaderProgram, materials: &[Material], textures: &[Texture]) {
+        shader.set_uniform("default_model", self.default_transform);
+
+        if let Some(mat_index) = self.material {
+            let material = &materials[mat_index];
+
+            shader.set_uniform("material.base_color", material.base_color);
+            shader.set_uniform("material.has_base_color", 1);
+
+            if let Some(base_tex_index) = material.base_tex {
+                textures[base_tex_index].bind(0);
+                shader.set_uniform("material.base_tex", 0);
+                shader.set_uniform("material.has_base_tex", 1);
+            } else {
+                shader.set_uniform("material.has_base_tex", 0);
             }
-        }
-
-        // TODO send multiple uniforms with one call
-        // OR use uniform buffers instead
-        if let Some(ref material) = self.material {
-            shader.set_uniform("material.has_specular", 1);
-            shader.set_uniform("material.has_diffuse", 1);
-
-            shader.set_uniform("material.ambient", material.ambient);
-            shader.set_uniform("material.shininess", material.shininess);
-            shader.set_uniform("material.specular", material.specular);
-            shader.set_uniform("material.diffuse", material.diffuse);
-        } else {
-            shader.set_uniform("material.has_specular", 0);
-            shader.set_uniform("material.has_diffuse", 0);
         }
 
         shader.bind();
@@ -133,6 +120,8 @@ impl<V: VertexData> Mesh<V> {
 pub struct Model<V: VertexData> {
     pub name: String,
     pub meshs: Vec<Mesh<V>>,
+    pub textures: Vec<Texture>,
+    pub materials: Vec<Material>,
 }
 
 impl<V: VertexData + Send> Model<V> {
@@ -155,7 +144,7 @@ impl<V: VertexData + Send> Model<V> {
 
     pub fn draw(&self, shader: &mut ShaderProgram) {
         for mesh in self.meshs.iter() {
-            mesh.draw(shader);
+            mesh.draw(shader, &self.materials, &self.textures);
         }
     }
 }

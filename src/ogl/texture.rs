@@ -8,6 +8,7 @@ use std::{convert::TryInto, ffi::c_void, path::Path};
 pub struct Texture(GLuint, GLuint);
 
 impl Texture {
+    /// Crates a new texture from a file in `path`, and optionally vertically flips the resulting texture.
     pub fn new<P: AsRef<Path>>(path: P, flip: bool) -> image::ImageResult<Texture> {
         let image = if flip {
             image::open(&path)?.flipv()
@@ -26,46 +27,47 @@ impl Texture {
             _ => unimplemented!(),
         };
 
-        Self::from_bytes(&data, image.width() as i32, image.height() as i32, format)
+        unsafe { Self::from_bytes(&data, image.width() as i32, image.height() as i32, format) }
     }
 
-    pub fn from_bytes(
+    /// Creates a new texture from it's raw bytes, with the specified width, height and OpenGL's `format`.
+    /// ## Safety
+    /// Ill combinations of formats and/or dimensions can result in a segmentation fault.
+    pub unsafe fn from_bytes(
         data: &[u8],
         width: i32,
         height: i32,
         format: GLenum,
     ) -> image::ImageResult<Texture> {
-        unsafe {
-            let mut texture: GLuint = 0;
+        let mut texture: GLuint = 0;
 
-            gl::GenTextures(1, &mut texture);
-            gl::BindTexture(gl::TEXTURE_2D, texture);
-            gl::TexImage2D(
-                gl::TEXTURE_2D,
-                0,
-                format.try_into().unwrap(),
-                width,
-                height,
-                0,
-                format,
-                gl::UNSIGNED_BYTE,
-                &data[0] as *const u8 as *const c_void,
-            );
-            gl::GenerateMipmap(gl::TEXTURE_2D);
+        gl::GenTextures(1, &mut texture);
+        gl::BindTexture(gl::TEXTURE_2D, texture);
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            format.try_into().unwrap(),
+            width,
+            height,
+            0,
+            format,
+            gl::UNSIGNED_BYTE,
+            data.as_ptr() as *const c_void,
+        );
+        gl::GenerateMipmap(gl::TEXTURE_2D);
 
-            gl::TexParameteri(
-                gl::TEXTURE_2D,
-                gl::TEXTURE_MIN_FILTER,
-                gl::LINEAR_MIPMAP_LINEAR as i32,
-            );
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_MIN_FILTER,
+            gl::LINEAR_MIPMAP_LINEAR as i32,
+        );
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
 
-            gl::BindTexture(gl::TEXTURE_2D, 0);
+        gl::BindTexture(gl::TEXTURE_2D, 0);
 
-            Ok(Texture(texture, gl::TEXTURE_2D))
-        }
+        Ok(Texture(texture, gl::TEXTURE_2D))
     }
 
     /// Create a cubemap from a list of paths to the textures.

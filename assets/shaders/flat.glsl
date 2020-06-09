@@ -19,15 +19,15 @@ void main() {
 out vec4 Col;
 
 struct Material {
-    vec3 diffuse;
-    bool has_diffuse;
+    vec4 base_color;
+    bool has_base_color;
 };
 
 uniform Material material;
 
 void main() {
-    if (material.has_diffuse) {
-        Col = vec4(material.diffuse, 1.0);
+    if (material.has_base_color) {
+        Col = material.base_color;
     } else {
         Col = vec4(1.0, 1.0, 1.0, 1.0);
     }

@@ -16,7 +16,7 @@ impl Texture {
         };
         let data = image.to_bytes();
 
-        let (internal_format, format) = match image {
+        let (_internal_format, format) = match image {
             DynamicImage::ImageBgr8(_) => (gl::RGB, gl::BGR),
             DynamicImage::ImageBgra8(_) => (gl::RGBA, gl::BGRA),
             DynamicImage::ImageRgb8(_) => (gl::RGB, gl::RGB),
@@ -26,6 +26,15 @@ impl Texture {
             _ => unimplemented!(),
         };
 
+        Self::from_bytes(&data, image.width() as i32, image.height() as i32, format)
+    }
+
+    pub fn from_bytes(
+        data: &[u8],
+        width: i32,
+        height: i32,
+        format: GLenum,
+    ) -> image::ImageResult<Texture> {
         unsafe {
             let mut texture: GLuint = 0;
 
@@ -34,9 +43,9 @@ impl Texture {
             gl::TexImage2D(
                 gl::TEXTURE_2D,
                 0,
-                internal_format.try_into().unwrap(),
-                image.width() as i32,
-                image.height() as i32,
+                format.try_into().unwrap(),
+                width,
+                height,
                 0,
                 format,
                 gl::UNSIGNED_BYTE,

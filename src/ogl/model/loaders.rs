@@ -124,7 +124,7 @@ where
         let mut stack = vec![node];
 
         while let Some(node) = stack.pop() {
-            if let Some(mesh) = process_node(&node, &buffers) {
+            if let Some(mesh) = process_node(&node, &buffers, &images) {
                 meshs.push(mesh);
             }
 
@@ -145,13 +145,34 @@ where
 fn process_node<V: VertexData>(
     node: &gltf::Node,
     buffers: &[gltf::buffer::Data],
+    images: &[gltf::image::Data],
 ) -> Option<Mesh<V>> {
     node.mesh().map(|mesh| {
         let mut indices: Vec<u32> = Vec::new();
         let mut raw = RawVertex::default();
+        let mut textures = Vec::new();
 
         for primitive in mesh.primitives() {
             let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
+            let gltf_material = primitive.material();
+
+            if let Some(normal_tex) = gltf_material.normal_texture() {
+                if let Some(tex) = reader.read_tex_coords(normal_tex.tex_coord()) {
+                    raw.tex_coords
+                        .extend(tex.into_f32().map(|t| Vector2::from(t)));
+                }
+                // TODO implement From<gltf::Texture> for glboot::Texture
+                let data = &images[normal_tex.texture().index()];
+                textures.push((
+                    "normal",
+                    Texture::from_bytes(
+                        &data.pixels,
+                        data.width as i32,
+                        data.height as i32,
+                        gl::RGBA, // TODO use the data specified format
+                    ),
+                ));
+            }
 
             if let Some(pos) = reader.read_positions() {
                 raw.vertices.extend(pos.map(|p| Vector3::from(p)));

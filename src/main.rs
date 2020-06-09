@@ -4,7 +4,7 @@ use glboot::core::{arcball::ArcBall, camera::Camera, window::Window};
 use glboot::ogl::{
     // buffers::{VertexArray, VertexBuffer},
     model::mesh::Model,
-    model::NormVertex,
+    model::StandardVertex,
     program::ShaderProgram,
     // texture::Texture,
 };
@@ -15,14 +15,14 @@ use glfw::{self, Action, Context, Key};
 fn main() {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
-    let shader_path = format!("{}/shaders/basic_ads.glsl", root);
-    let m_path = format!("{}/models/teapot.obj", root);
+    let shader_path = format!("{}/shaders/flat.glsl", root);
+    let m_path = format!("{}/models/Triangle.gltf", root);
 
     let (mut window, mut imgui) = setup();
 
     let mut program = ShaderProgram::from_file(shader_path).unwrap();
 
-    let model: Model<NormVertex> = Model::load(m_path).unwrap();
+    let model: Model<StandardVertex> = Model::load(m_path).unwrap();
 
     let mut gui_state = glboot::ImGuiState::default();
     let camera = Camera::new(Point3::new(0.0, 0.3, 0.5), Vector3::new(0.0, -0.3, -0.5));

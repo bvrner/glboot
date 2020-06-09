@@ -5,7 +5,7 @@ use cgmath::{Vector2, Vector3};
 // since using a full vertex would consume more memory than needed sometimes
 // and it's also easier to support multiple file types this way
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct RawVertex {
     pub vertices: Vec<Vector3<f32>>,
     pub normals: Vec<Vector3<f32>>,

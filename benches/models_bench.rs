@@ -1,7 +1,8 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use glboot::core::window::Window;
-use glboot::ogl::model::loaders;
+use glboot::ogl::model::{FullVertex, loaders};
+use glboot::ogl::model::mesh::Model;
 
 use std::time::Duration;
 
@@ -14,7 +15,7 @@ pub fn obj_loader(c: &mut Criterion) {
 
     group.measurement_time(Duration::from_secs(30));
     group.bench_function("teapot", |b| {
-        b.iter(|| loaders::load_obj(&tea_path).unwrap())
+        b.iter(|| { let model: Model<FullVertex> = loaders::load_obj(&tea_path).unwrap(); })
     });
 
     group.finish();

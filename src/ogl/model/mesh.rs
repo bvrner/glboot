@@ -140,7 +140,17 @@ impl<V: VertexData + Send> Model<V> {
     where
         P: AsRef<Path> + Debug,
     {
-        super::loaders::load_obj(path)
+        if let Some(ext) = path.as_ref().extension() {
+            if ext == "obj" {
+                super::loaders::load_obj(path)
+            } else if ext == "gltf" || ext == "glb" {
+                super::loaders::load_gltf(path)
+            } else {
+                Err(String::from("Unsuported file"))
+            }
+        } else {
+            Err(String::from("Unsuported file"))
+        }
     }
 
     pub fn draw(&self, shader: &mut ShaderProgram) {

@@ -19,9 +19,10 @@ pub enum LoaderError {
     FileError,
 }
 
-pub fn load_obj<P, V: VertexData + Send>(path: P) -> Result<Model<V>, String>
+pub fn load_obj<P, V>(path: P) -> Result<Model<V>, String>
 where
     P: AsRef<Path> + Debug,
+    V: VertexData + Send,
 {
     let (models, materials) = tobj::load_obj(&path, true).unwrap();
 
@@ -105,4 +106,73 @@ where
         name: String::new(),
         meshs,
     })
+}
+
+pub fn load_gltf<P, V>(path: P) -> Result<Model<V>, String>
+where
+    P: AsRef<Path>,
+    V: VertexData,
+{
+    let (document, buffers, images) = gltf::import(path).unwrap();
+
+    assert_eq!(buffers.len(), document.buffers().count());
+    assert_eq!(images.len(), document.images().count());
+
+    let mut meshs = Vec::new();
+
+    for node in document.nodes() {
+        let mut stack = vec![node];
+
+        while let Some(node) = stack.pop() {
+            if let Some(mesh) = process_node(&node, &buffers) {
+                meshs.push(mesh);
+            }
+
+            for child in node.children() {
+                stack.push(child);
+            }
+        }
+    }
+
+    meshs.iter_mut().for_each(|m| m.setup());
+
+    Ok(Model {
+        name: String::new(),
+        meshs,
+    })
+}
+
+fn process_node<V: VertexData>(
+    node: &gltf::Node,
+    buffers: &[gltf::buffer::Data],
+) -> Option<Mesh<V>> {
+    node.mesh().map(|mesh| {
+        let mut indices: Vec<u32> = Vec::new();
+        let mut raw = RawVertex::default();
+
+        for primitive in mesh.primitives() {
+            let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
+
+            if let Some(pos) = reader.read_positions() {
+                raw.vertices.extend(pos.map(|p| Vector3::from(p)));
+            }
+            if let Some(norm) = reader.read_normals() {
+                raw.normals.extend(norm.map(|n| Vector3::from(n)));
+            }
+            if let Some(tex) = reader.read_tex_coords(0) {
+                raw.tex_coords
+                    .extend(tex.into_f32().map(|t| Vector2::from(t)));
+            }
+            // if let Some(tex) = reader.read_tex_coords(1) {
+            //     tex_coords.extend(tex.into_f32().map(|t| Vector2::from(t)));
+            // }
+
+            if let Some(ind) = reader.read_indices() {
+                indices.extend(ind.into_u32());
+            }
+        }
+
+        Mesh::new(V::from_raw(raw), None, indices, None)
+    })
+    // unimplemented!()
 }

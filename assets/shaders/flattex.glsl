@@ -43,8 +43,10 @@ struct Material {
 uniform Material material;
 
 void main() {
-    if (material.has_base_tex) {
-        Col = texture(material.base_tex, TexCoords);
+    if (material.has_base_tex && material.has_base_color) {
+        Col = texture(material.base_tex, TexCoords) * material.base_color;
+    } else if (material.has_base_color) {
+        Col = material.base_color;
     } else {
         Col = vec4(1.0, 1.0, 1.0, 1.0);
     }

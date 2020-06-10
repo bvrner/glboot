@@ -149,10 +149,28 @@ where
                 .base_color_texture()
                 .map(|info| info.texture().index());
 
+            let metallic = metallic_roughness.metallic_factor();
+            let roughness = metallic_roughness.roughness_factor();
+            let metallic_tex = metallic_roughness
+                .metallic_roughness_texture()
+                .map(|info| info.texture().index());
+
+            let normal = mat.normal_texture().map(|norm| norm.texture().index());
+            let occlusion_tex = mat.occlusion_texture().map(|occ| occ.texture().index());
+            let occlusion_str = mat
+                .occlusion_texture()
+                .map(|occ| occ.strength())
+                .unwrap_or(0.0);
+
             Material {
                 base_color,
                 base_tex,
-                ..Default::default()
+                metallic,
+                roughness,
+                metallic_tex,
+                normal,
+                occlusion_tex,
+                occlusion_str,
             }
         })
         .collect();
@@ -165,7 +183,7 @@ where
 
             while let Some(node) = stack.pop() {
                 if let Some(mesh) = process_node(&node, &buffers) {
-                    meshs.push(mesh);
+                    meshs.extend(mesh);
                 }
 
                 for child in node.children() {
@@ -188,37 +206,35 @@ where
 fn process_node<V: VertexData>(
     node: &gltf::Node,
     buffers: &[gltf::buffer::Data],
-) -> Option<Mesh<V>> {
+) -> Option<Vec<Mesh<V>>> {
     let default_transform = node.transform().matrix().into();
 
     node.mesh().map(|mesh| {
-        let mut indices: Vec<u32> = Vec::new();
-        let mut raw = RawVertex::default();
-        let mut material = None;
+        mesh.primitives()
+            .map(|primitive| {
+                let mut indices: Vec<u32> = Vec::new();
+                let mut raw = RawVertex::default();
+                let material = primitive.material().index();
 
-        for primitive in mesh.primitives() {
-            let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
-            material = primitive.material().index();
+                let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
 
-            if let Some(pos) = reader.read_positions() {
-                raw.vertices.extend(pos.map(|p| Vector3::from(p)));
-            }
-            if let Some(norm) = reader.read_normals() {
-                raw.normals.extend(norm.map(|n| Vector3::from(n)));
-            }
-            if let Some(tex) = reader.read_tex_coords(0) {
-                raw.tex_coords
-                    .extend(tex.into_f32().map(|t| Vector2::from(t)));
-            }
+                if let Some(pos) = reader.read_positions() {
+                    raw.vertices.extend(pos.map(|p| Vector3::from(p)));
+                }
+                if let Some(norm) = reader.read_normals() {
+                    raw.normals.extend(norm.map(|n| Vector3::from(n)));
+                }
+                if let Some(tex) = reader.read_tex_coords(0) {
+                    raw.tex_coords
+                        .extend(tex.into_f32().map(|t| Vector2::from(t)));
+                }
 
-            if let Some(ind) = reader.read_indices() {
-                indices.extend(ind.into_u32());
-            }
-        }
+                if let Some(ind) = reader.read_indices() {
+                    indices.extend(ind.into_u32());
+                }
 
-        // dbg!(&raw);
-
-        Mesh::new(V::from_raw(raw), indices, material, default_transform)
+                Mesh::new(V::from_raw(raw), indices, material, default_transform)
+            })
+            .collect()
     })
-    // unimplemented!()
 }

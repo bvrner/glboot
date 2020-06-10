@@ -1,6 +1,6 @@
 use super::mesh::{Material, Mesh, Model};
 use crate::ogl::texture::Texture;
-use cgmath::{vec2, vec3, Vector2, Vector3};
+use cgmath::{Matrix4, Vector2, Vector3};
 
 use super::{RawVertex, VertexData};
 
@@ -113,6 +113,8 @@ where
     P: AsRef<Path>,
     V: VertexData,
 {
+    use cgmath::SquareMatrix;
+
     let (document, buffers, images) = gltf::import(path).unwrap();
 
     assert_eq!(buffers.len(), document.buffers().count());
@@ -207,7 +209,7 @@ fn process_node<V: VertexData>(
     node: &gltf::Node,
     buffers: &[gltf::buffer::Data],
 ) -> Option<Vec<Mesh<V>>> {
-    let default_transform = node.transform().matrix().into();
+    let node_transform: Matrix4<f32> = node.transform().matrix().into();
 
     node.mesh().map(|mesh| {
         mesh.primitives()
@@ -233,7 +235,7 @@ fn process_node<V: VertexData>(
                     indices.extend(ind.into_u32());
                 }
 
-                Mesh::new(V::from_raw(raw), indices, material, default_transform)
+                Mesh::new(V::from_raw(raw), indices, material, node_transform)
             })
             .collect()
     })

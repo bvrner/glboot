@@ -3,6 +3,7 @@ use crate::ogl::texture::Texture;
 use cgmath::{Matrix4, Vector2, Vector3};
 
 use super::{RawVertex, VertexData};
+use rayon::prelude::*;
 
 use std::{
     // error::Error,
@@ -17,7 +18,8 @@ pub enum LoaderError {
     FileError,
 }
 
-pub fn load_obj<P, V>(path: P) -> Result<Model<V>, String>
+// TODO rewrite this importer supporting the new vertex and material designs
+pub fn load_obj<P, V>(_path: P) -> Result<Model<V>, String>
 where
     P: AsRef<Path> + Debug,
     V: VertexData + Send,
@@ -113,8 +115,6 @@ where
     P: AsRef<Path>,
     V: VertexData,
 {
-    use cgmath::SquareMatrix;
-
     let (document, buffers, images) = gltf::import(path).unwrap();
 
     assert_eq!(buffers.len(), document.buffers().count());
@@ -144,6 +144,8 @@ where
 
     let materials: Vec<Material> = document
         .materials()
+        .into_iter()
+        .par_bridge()
         .map(|mat| {
             let metallic_roughness = mat.pbr_metallic_roughness();
             let base_color = metallic_roughness.base_color_factor().into();
@@ -177,7 +179,6 @@ where
         .collect();
 
     let mut meshs = Vec::new();
-
     for scene in document.scenes() {
         for node in scene.nodes() {
             // each primitive must be transformed by the accum of

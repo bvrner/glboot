@@ -88,6 +88,12 @@ fn env_option(ui: &imgui::Ui, clicked: &mut bool) -> bool {
 #[inline]
 fn options(ui: &imgui::Ui, clicked: &mut bool) -> bool {
     if imgui::CollapsingHeader::new(imgui::im_str!("Options")).build(ui) {
+        let mut color = [0.1, 0.1, 0.1, 0.1];
+        if imgui::ColorEdit::new(imgui::im_str!("Background color"), &mut color).build(ui) {
+            unsafe {
+                gl::ClearColor(color[0], color[1], color[2], color[3]);
+            }
+        }
         ui.checkbox(imgui::im_str!("Wireframe"), clicked)
     } else {
         false

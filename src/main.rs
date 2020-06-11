@@ -32,7 +32,7 @@ fn main() {
         cgmath::perspective(cgmath::Deg(45.0_f32), 800.0 / 600.0, 0.1_f32, 100f32),
     );
     program.set_uniform("view", camera.get_matrix());
-    program.set_uniform("model", Matrix4::from_scale(0.0000001));
+    program.set_uniform("model", Matrix4::from_scale(0.1));
     program.set_uniform("arc", Matrix4::identity());
 
     let mut arc = ArcBall::new(800.0, 600.0);

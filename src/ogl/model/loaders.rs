@@ -158,11 +158,10 @@ where
                 .map(|info| info.texture().index());
 
             let normal = mat.normal_texture().map(|norm| norm.texture().index());
-            let occlusion_tex = mat.occlusion_texture().map(|occ| occ.texture().index());
-            let occlusion_str = mat
+            let (occlusion_tex, occlusion_str) = mat
                 .occlusion_texture()
-                .map(|occ| occ.strength())
-                .unwrap_or(0.0);
+                .map(|occ| (Some(occ.texture().index()), occ.strength()))
+                .unwrap_or((None, 0.0));
 
             Material {
                 base_color,
@@ -181,15 +180,20 @@ where
 
     for scene in document.scenes() {
         for node in scene.nodes() {
-            let mut stack = vec![node];
+            // each primitive must be transformed by the accum of
+            // trannsformations from the root node till the local node
+            // that's my quick ad hoc for that, I'll try to refactor it soon
+            let root_transform = node.transform().matrix().into();
+            let mut stack: Vec<(gltf::Node, Matrix4<f32>)> = vec![(node, root_transform)];
 
-            while let Some(node) = stack.pop() {
-                if let Some(mesh) = process_node(&node, &buffers) {
+            while let Some((node, transform)) = stack.pop() {
+                if let Some(mesh) = process_node(&node, &buffers, transform) {
                     meshs.extend(mesh);
                 }
 
                 for child in node.children() {
-                    stack.push(child);
+                    let local: Matrix4<f32> = child.transform().matrix().into();
+                    stack.push((child, transform * local));
                 }
             }
         }
@@ -208,8 +212,10 @@ where
 fn process_node<V: VertexData>(
     node: &gltf::Node,
     buffers: &[gltf::buffer::Data],
+    transform: Matrix4<f32>,
 ) -> Option<Vec<Mesh<V>>> {
     let node_transform: Matrix4<f32> = node.transform().matrix().into();
+    let node_transform = node_transform * transform;
 
     node.mesh().map(|mesh| {
         mesh.primitives()

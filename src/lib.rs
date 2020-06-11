@@ -56,9 +56,7 @@ impl ImGUI {
             .size([300.0, 300.0], imgui::Condition::Once)
             .build(&ui, || {
                 if imgui::CollapsingHeader::new(imgui::im_str!("Object")).build(&ui) {
-                    // updated |= color_picker(&ui, &mut state.colors);
                     updated |= scale(&ui, &mut state.scale);
-                    // updated |= env_option(&ui, &mut state.env);
                 }
 
                 if imgui::CollapsingHeader::new(imgui::im_str!("Options")).build(&ui) {
@@ -108,11 +106,7 @@ impl ImGUI {
 
 #[inline]
 fn options(ui: &imgui::Ui, clicked: &mut bool) -> bool {
-    if imgui::CollapsingHeader::new(imgui::im_str!("Options")).build(ui) {
-        ui.checkbox(imgui::im_str!("Wireframe"), clicked)
-    } else {
-        false
-    }
+    ui.checkbox(imgui::im_str!("Wireframe"), clicked)
 }
 
 #[inline]

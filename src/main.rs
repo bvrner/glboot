@@ -53,8 +53,6 @@ fn main() {
         model.draw(&mut program);
 
         if imgui.draw(&mut window, &mut gui_state) {
-            program.set_uniform("col", Vector3::from(gui_state.colors));
-
             let (w, h) = window.get_framebuffer_size();
             let proj = cgmath::perspective(
                 cgmath::Deg(gui_state.cam_slider),
@@ -86,6 +84,10 @@ fn main() {
                 }
                 glfw::WindowEvent::Key(Key::Space, _, Action::Press, _) => {
                     camera.pos += 2.5 * camera.up;
+                    program.set_uniform("view", camera.get_matrix());
+                }
+                glfw::WindowEvent::Key(Key::LeftShift, _, Action::Press, _) => {
+                    camera.pos -= 2.5 * camera.up;
                     program.set_uniform("view", camera.get_matrix());
                 }
                 // glfw::WindowEvent::Key(Key::A, _, Action::Press, _) => {

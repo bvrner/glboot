@@ -11,9 +11,11 @@ pub struct ImGUI {
     pub imgui_glfw: ImguiGLFW,
 }
 
+// This is a pretty wack way to deal with options
+// I'll have to rethink it later
 #[derive(Debug, Copy, Clone)]
 pub struct ImGuiState {
-    pub colors: [f32; 3],
+    pub bg_color: [f32; 4],
     pub wireframe: bool,
     pub env: bool,
     pub cam_slider: f32,
@@ -23,7 +25,7 @@ pub struct ImGuiState {
 impl Default for ImGuiState {
     fn default() -> ImGuiState {
         ImGuiState {
-            colors: [0.5, 0.5, 0.5],
+            bg_color: [0.1, 0.1, 0.1, 0.1],
             wireframe: false,
             env: true,
             cam_slider: 45.0,
@@ -56,9 +58,28 @@ impl ImGUI {
                 if imgui::CollapsingHeader::new(imgui::im_str!("Object")).build(&ui) {
                     // updated |= color_picker(&ui, &mut state.colors);
                     updated |= scale(&ui, &mut state.scale);
-                    updated |= env_option(&ui, &mut state.env);
+                    // updated |= env_option(&ui, &mut state.env);
                 }
-                updated |= options(&ui, &mut state.wireframe);
+
+                if imgui::CollapsingHeader::new(imgui::im_str!("Options")).build(&ui) {
+                    if imgui::ColorEdit::new(
+                        imgui::im_str!("Background color"),
+                        &mut state.bg_color,
+                    )
+                    .build(&ui)
+                    {
+                        unsafe {
+                            gl::ClearColor(
+                                state.bg_color[0],
+                                state.bg_color[1],
+                                state.bg_color[2],
+                                state.bg_color[3],
+                            );
+                        }
+                    }
+                    updated |= options(&ui, &mut state.wireframe);
+                }
+
                 updated |= camera(&ui, &mut state.cam_slider);
             });
         self.imgui_glfw.draw(ui, window);
@@ -80,23 +101,30 @@ impl ImGUI {
 //         .build(&ui)
 // }
 
-#[inline]
-fn env_option(ui: &imgui::Ui, clicked: &mut bool) -> bool {
-    ui.checkbox(imgui::im_str!("Refraction|Reflection"), clicked)
-}
+// #[inline]
+// fn env_option(ui: &imgui::Ui, clicked: &mut bool) -> bool {
+//     ui.checkbox(imgui::im_str!("Refraction|Reflection"), clicked)
+// }
 
 #[inline]
 fn options(ui: &imgui::Ui, clicked: &mut bool) -> bool {
     if imgui::CollapsingHeader::new(imgui::im_str!("Options")).build(ui) {
-        let mut color = [0.1, 0.1, 0.1, 0.1];
-        if imgui::ColorEdit::new(imgui::im_str!("Background color"), &mut color).build(ui) {
-            unsafe {
-                gl::ClearColor(color[0], color[1], color[2], color[3]);
-            }
-        }
         ui.checkbox(imgui::im_str!("Wireframe"), clicked)
     } else {
         false
+    }
+}
+
+fn bg_color(ui: &imgui::Ui, state: &mut ImGuiState) {
+    if imgui::ColorEdit::new(imgui::im_str!("Background color"), &mut state.bg_color).build(ui) {
+        unsafe {
+            gl::ClearColor(
+                state.bg_color[0],
+                state.bg_color[1],
+                state.bg_color[2],
+                state.bg_color[3],
+            );
+        }
     }
 }
 

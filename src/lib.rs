@@ -115,19 +115,6 @@ fn options(ui: &imgui::Ui, clicked: &mut bool) -> bool {
     }
 }
 
-fn bg_color(ui: &imgui::Ui, state: &mut ImGuiState) {
-    if imgui::ColorEdit::new(imgui::im_str!("Background color"), &mut state.bg_color).build(ui) {
-        unsafe {
-            gl::ClearColor(
-                state.bg_color[0],
-                state.bg_color[1],
-                state.bg_color[2],
-                state.bg_color[3],
-            );
-        }
-    }
-}
-
 #[inline]
 fn camera(ui: &imgui::Ui, fov: &mut f32) -> bool {
     if imgui::CollapsingHeader::new(imgui::im_str!("Camera")).build(ui) {

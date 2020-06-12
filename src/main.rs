@@ -2,7 +2,7 @@
 
 use glboot::core::{arcball::ArcBall, camera::Camera, window::Window};
 use glboot::ogl::{
-    // buffers::{VertexArray, VertexBuffer},
+    buffers::{Framebuffer, IndexBuffer, VertexArray, VertexBuffer},
     model::mesh::Model,
     model::StandardVertex,
     program::ShaderProgram,
@@ -12,20 +12,36 @@ use glboot::ogl::{
 use cgmath::{Matrix4, Point2, Point3, SquareMatrix, Vector3};
 use glfw::{self, Action, Context, Key};
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let shader_path = format!("{}/shaders/flattex.glsl", root);
+    let post_path = format!("{}/shaders/postprocessing.glsl", root);
     let m_path = format!("{}/models/matilda/scene.gltf", root);
 
     let (mut window, mut imgui) = setup();
 
-    let mut program = ShaderProgram::from_file(shader_path).unwrap();
+    let mut program = ShaderProgram::from_file(shader_path)?;
+    let mut post_program = ShaderProgram::from_file(post_path)?;
+    post_program.set_uniform("screenTex", 0);
+
+    let framebuffer = Framebuffer::new(800, 600).unwrap();
 
     let model: Model<StandardVertex> = Model::load(m_path).unwrap();
 
     let mut gui_state = glboot::ImGuiState::default();
     let mut camera = Camera::new(Point3::new(0.0, 1.0, 1.0), Vector3::new(0.0, 0.0, -1.0));
+
+    let screen_quad = [
+        -1.0_f32, 1.0, 0.0, 1.0, -1.0, -1.0, 0.0, 0.0, 1.0, -1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0,
+        1.0, -1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0,
+    ];
+
+    let quad_vbo = VertexBuffer::new(&screen_quad);
+    let quad_vao = VertexArray::new();
+    let layout = glboot::layout![(2, f32, gl::FLOAT), (2, f32, gl::FLOAT)];
+
+    quad_vao.add_buffer(&quad_vbo, &layout);
 
     program.set_uniform(
         "projection",
@@ -38,8 +54,10 @@ fn main() {
     let mut arc = ArcBall::new(800.0, 600.0);
     let events = window.events.take().unwrap();
     while !window.should_close() {
+        framebuffer.bind();
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+            gl::Enable(gl::DEPTH_TEST);
             gl::PolygonMode(
                 gl::FRONT_AND_BACK,
                 if gui_state.wireframe {
@@ -51,6 +69,20 @@ fn main() {
         }
 
         model.draw(&mut program);
+        framebuffer.unbind();
+
+        post_program.bind();
+        framebuffer.bind_texture(0);
+        quad_vao.bind();
+        unsafe {
+            gl::Disable(gl::DEPTH_TEST);
+            gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::DrawArrays(gl::TRIANGLES, 0, 6);
+        }
+        framebuffer.unbind_texture();
+        post_program.unbind();
+        quad_vao.unbind();
 
         if imgui.draw(&mut window, &mut gui_state) {
             let (w, h) = window.get_framebuffer_size();
@@ -69,11 +101,13 @@ fn main() {
                     * Matrix4::from_translation(Vector3::new(0.0, -0.5, 0.0)),
             );
         }
+
         window.update();
 
         for (_, event) in glfw::flush_messages(&events) {
             imgui.handle_event(&event);
 
+            // THIS NEEDS A MAJOR REFACTOR
             match event {
                 glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
                     window.set_should_close(true);
@@ -90,16 +124,10 @@ fn main() {
                     camera.pos -= 2.5 * camera.up;
                     program.set_uniform("view", camera.get_matrix());
                 }
-                // glfw::WindowEvent::Key(Key::A, _, Action::Press, _) => {
-                //     window.set_should_close(true);
-                // }
                 glfw::WindowEvent::Key(Key::S, _, Action::Press, _) => {
                     camera.pos -= 2.5 * camera.front;
                     program.set_uniform("view", camera.get_matrix());
                 }
-                // glfw::WindowEvent::Key(Key::D, _, Action::Press, _) => {
-                //     camera.pos += 2.5 * camera.front;
-                // }
                 glfw::WindowEvent::MouseButton(glfw::MouseButtonRight, Action::Press, _) => {
                     let point = window.get_cursor_pos();
                     arc.click(Point2::new(point.0 as f32, point.1 as f32));
@@ -117,6 +145,7 @@ fn main() {
                     unsafe { gl::Viewport(0, 0, w, h) };
 
                     arc.update(w as f32, h as f32);
+                    framebuffer.update_dimensions(w, h);
 
                     let proj = cgmath::perspective(
                         cgmath::Deg(gui_state.cam_slider),
@@ -131,6 +160,7 @@ fn main() {
             }
         }
     }
+    Ok(())
 }
 
 fn setup() -> (Window, glboot::ImGUI) {

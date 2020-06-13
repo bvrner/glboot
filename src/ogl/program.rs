@@ -101,7 +101,9 @@ impl ShaderProgram {
 
         let location = unsafe { gl::GetUniformLocation(self.0, ffi_name.as_ptr()) };
 
-        self.1.insert(location, uniform.into());
+        if location != -1 {
+            self.1.insert(location, uniform.into());
+        }
     }
 
     pub fn send_uniforms(&self) {

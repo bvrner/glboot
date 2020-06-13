@@ -2,7 +2,7 @@
 
 use glboot::core::{arcball::ArcBall, camera::Camera, window::Window};
 use glboot::ogl::{
-    buffers::{Framebuffer, IndexBuffer, VertexArray, VertexBuffer},
+    buffers::{Framebuffer, VertexArray, VertexBuffer},
     model::mesh::Model,
     model::StandardVertex,
     program::ShaderProgram,
@@ -15,9 +15,10 @@ use glfw::{self, Action, Context, Key};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
-    let shader_path = format!("{}/shaders/flattex.glsl", root);
+    let shader_path = format!("{}/shaders/celshade.glsl", root);
     let post_path = format!("{}/shaders/postprocessing.glsl", root);
-    let m_path = format!("{}/models/matilda/scene.gltf", root);
+    // let m_path = format!("{}/models/matilda/scene.gltf", root);
+    let m_path = format!("{}/models/simpler_dragon.glb", root);
 
     let (mut window, mut imgui) = setup();
 
@@ -30,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let model: Model<StandardVertex> = Model::load(m_path).unwrap();
 
     let mut gui_state = glboot::ImGuiState::default();
-    let mut camera = Camera::new(Point3::new(0.0, 1.0, 1.0), Vector3::new(0.0, 0.0, -1.0));
+    let mut camera = Camera::new(Point3::new(0.0, 0.0, 1.0), Vector3::new(0.0, 0.0, -1.0));
 
     let screen_quad = [
         -1.0_f32, 1.0, 0.0, 1.0, -1.0, -1.0, 0.0, 0.0, 1.0, -1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0,

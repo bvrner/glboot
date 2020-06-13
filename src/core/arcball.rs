@@ -1,8 +1,8 @@
 use cgmath::{InnerSpace, Point2, Quaternion, Vector3};
 
 pub struct ArcBall {
-    // scaling factor to normalize coordinates to viewport
-    scales: (f32, f32),
+    // the dimensions of the window
+    win_size: (f32, f32),
     // the point the rotation currently is
     current: Point2<f32>,
     // the vector to the center of the ball when the click occurred
@@ -19,53 +19,43 @@ pub struct ArcBall {
 
 impl ArcBall {
     pub fn new(width: f32, height: f32) -> Self {
-        let mut ret = ArcBall {
-            scales: (0.0, 0.0),
+        ArcBall {
+            win_size: (width, height),
             current: Point2::new(0.0, 0.0),
             click_vec: Vector3::new(0.0, 0.0, 0.0),
             drag_vec: Vector3::new(0.0, 0.0, 0.0),
             is_on: false,
             this_rot: Quaternion::new(1.0, 0.0, 0.0, 0.0),
             last_rot: Quaternion::new(1.0, 0.0, 0.0, 0.0),
-        };
-        ret.update(width, height);
-
-        ret
+        }
     }
 
     pub fn update(&mut self, width: f32, height: f32) {
-        self.scales.0 = 1.0 / ((width - 1.0) * 0.5);
-        self.scales.1 = 1.0 / ((height - 1.0) * 0.5);
+        self.win_size.0 = width;
+        self.win_size.1 = height;
     }
 
     pub fn click(&mut self, point: Point2<f32>) {
         self.current = point;
         self.is_on = true;
-        self.this_rot = self.last_rot;
         self.click_vec = self.get_vector();
     }
 
     pub fn drag(&mut self, point: Point2<f32>) -> Quaternion<f32> {
         self.current = point;
-
         self.drag_vec = self.get_vector();
 
         // get the axis of rotation by crossing the click and drag vectors
         let perp = self.click_vec.cross(self.drag_vec);
 
-        self.this_rot = self.last_rot
-            * if perp.magnitude() > f32::EPSILON {
-                // since both vectors are normalized their dor will give us the angle of rotation
-                Quaternion::from_sv(self.click_vec.dot(self.drag_vec), perp)
-            } else {
-                Quaternion::new(0.0, 0.0, 0.0, 0.0)
-            };
-        self.this_rot
+        // since both vectors are normalized their dot will give us the angle of rotation
+        self.this_rot = Quaternion::from_sv(self.click_vec.dot(self.drag_vec), perp);
+        self.this_rot * self.last_rot
     }
 
     pub fn finish(&mut self) {
         self.is_on = false;
-        self.last_rot = self.this_rot;
+        self.last_rot = self.this_rot * self.last_rot;
     }
 
     // get the current vector to the center of the ball
@@ -73,8 +63,8 @@ impl ArcBall {
         let mut temp = self.current;
 
         // normalize the coordinates
-        temp.x = (temp.x * self.scales.0) - 1.0;
-        temp.y = 1.0 - (temp.y * self.scales.1);
+        temp.x = (2.0 * temp.x - self.win_size.0) / self.win_size.0;
+        temp.y = -(2.0 * temp.y - self.win_size.1) / self.win_size.1;
 
         // get the length of the vector
         let len = (temp.x * temp.x) + (temp.y * temp.y);

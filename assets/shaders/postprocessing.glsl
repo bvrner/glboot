@@ -46,6 +46,25 @@ const float blur[9] = float[](
     1.0 / 16, 2.0 / 16, 1.0 / 16
 );
 
+vec4 sobel_kernel() {
+    mat3 I;
+    vec3 s;
+    for (int i=0; i<3; i++) {
+        for (int j=0; j<3; j++) {
+            s = texelFetch(screenTex, ivec2(gl_FragCoord) + ivec2(i-1,j-1), 0 ).rgb;
+            I[i][j] = length(s);
+        }
+    }
+
+    float cnv[2];
+    for (int i=0; i<2; i++) {
+        float dp3 = dot(sobel[i][0], I[0]) + dot(sobel[i][1], I[1]) + dot(sobel[i][2], I[2]);
+        cnv[i] = dp3 * dp3;
+    }
+
+    return vec4(vec3(sqrt(cnv[0] * cnv[0] + cnv[1] * cnv[1])), 1.0);
+}
+
 vec4 apply_kernel(float kernel[9]) {
     const float offset = 1.0 / 300.0;
     vec2 offsets[9] = vec2[](
@@ -64,6 +83,7 @@ vec4 apply_kernel(float kernel[9]) {
     for (int i = 0; i < 9; i++) {
         sample_tex[i] = vec3(texture(screenTex, TexCoords.st + offsets[i]));
     }
+
     vec3 col = vec3(0.0);
     for (int i = 0; i < 9; i++)
         col += sample_tex[i] * kernel[i];
@@ -92,6 +112,9 @@ void main() {
             break;
         case 5:
             Color = apply_kernel(edge);
+            break;
+        case 6:
+            Color = texture(screenTex, TexCoords) * sobel_kernel();
             break;
     }
 }

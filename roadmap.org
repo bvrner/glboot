@@ -16,7 +16,7 @@ A list of ideas and objectives that I have with this project
 - [-] Textures
   - [X] 2D
   - [-] 3D
-  - [-] Cubemaps
+  - [X] Cubemaps
   - [-] Spritesheets/Atlas
 - [-] Shaders
   - [X] Shader compiling
@@ -25,11 +25,11 @@ A list of ideas and objectives that I have with this project
   - [-] Geometry
   - [?] Compute
   - [-] Include extension
-    : Before compilation, parse the shader source and preprocess #include directives to allow better code reuse
-- [-] Framebuffers
+     Before compilation, parse the shader source and preprocess #include directives to allow better code reuse
+- [X] Framebuffers
 - [-] Instance rendering
 - [?] Renderer interface
-    : Define instatiable renderers through a trait, maybe something like:
+     Define instatiable renderers through a trait, maybe something like:
     #+BEGIN_SRC rust
 pub trait Renderer {
     // Setup all state needed
@@ -42,12 +42,13 @@ pub trait Renderer {
     fn finish(&self);
 }
 #+END_SRC
-    : I haven't seen any need to something like that, and I still need to refine the idea, so it's still in doubt.
-- [-] Material System
+     I haven't seen any need to something like that, and I still need to refine the idea, so it's still in doubt.
+- [X] Material System
 ** Model Loading
 - [X] OBJ loader
   - [X] Material Loading
 - [-] PLY loader
+- [X] glTF loader
 - [-] Multiple models in one call
   - [?] Parallel iterators or async functions
     : Need to implement and benchmark both approaches and decide the one to use
@@ -56,10 +57,10 @@ pub trait Renderer {
 - [X] Setup ImGUI
 - [-] Texture and Color selector
 - [-] Mesh cycling
-- [-] Mouse rotation
-    : Implement a Arcball rotations system to allow rotating the mesh with the mouse
+- [X] Mouse rotation
+     Implement a Arcball rotations system to allow rotating the mesh with the mouse
 - [?] Real time shader writing and compilation
-    : Implement a small editor in ImGUI to allow writing and compiling shaders, seeing their results in real time
+     Implement a small editor in ImGUI to allow writing and compiling shaders, seeing their results in real time
 ** [?] Animation
 - [?] Sprite animation
 - [?] Skeletal animation

@@ -83,13 +83,14 @@ impl ImGUI {
                 updated = updated || camera(&ui, &mut state.cam_slider);
 
                 if imgui::CollapsingHeader::new(im_str!("Post-Processing")).build(&ui) {
-                    const NAMES: [&'static str; 6] = [
+                    const NAMES: [&'static str; 7] = [
                         "None",
                         "Negative",
                         "Black and White",
                         "Sharp",
                         "Blur",
                         "Edge",
+                        "Sobel"
                     ];
 
                     for (i, name) in NAMES.iter().enumerate() {

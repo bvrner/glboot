@@ -6,15 +6,16 @@ Since everything here is experimental it's not really meant to be published or u
 
 ## Current general state
 ![state](https://github.com/bvrner/glboot/blob/master/shots/output.gif)
+A good amount of OpenGL was already abstracted, nothing too complex, some stuff still needs working, but it's going well.
 
 ## Screenshots
-This is very much a work in progress, but seeing how things are is nice, so I'll put some screenshots from times to times.
+This is very much a work in progress, but seeing how things are is nice, so I'll put some screenshots here from times to times.
 
 ![matilda](https://github.com/bvrner/glboot/blob/master/shots/matilda.png)
-Amazing model by [nicolekeane](https://sketchfab.com/3d-models/matilda-7ddedfb652bd4ea091bc3de27f98fc02)
+glTF model loading. This amazing model was made by [nicolekeane](https://sketchfab.com/3d-models/matilda-7ddedfb652bd4ea091bc3de27f98fc02)
+
+![dragon](https://github.com/bvrner/glboot/blob/master/shots/post.png)
+Post processing effects implemented.
 
 ![pot](https://github.com/bvrner/glboot/blob/master/shots/refl_pot.png)
-
-![back](https://github.com/bvrner/glboot/blob/master/shots/backpack.png)
-Backpack model by [Berk Gedik](https://sketchfab.com/3d-models/survival-guitar-backpack-low-poly-799f8c4511f84fab8c3f12887f7e6b36)
-
+Cubemaps and environment mapping.

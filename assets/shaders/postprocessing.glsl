@@ -114,7 +114,7 @@ void main() {
             Color = apply_kernel(edge);
             break;
         case 6:
-            Color = texture(screenTex, TexCoords) * sobel_kernel();
+            Color = /*texture(screenTex, TexCoords) */ sobel_kernel();
             break;
     }
 }

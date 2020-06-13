@@ -15,7 +15,8 @@ use glfw::{self, Action, Context, Key};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
-    let shader_path = format!("{}/shaders/celshade.glsl", root);
+    // let shader_path = format!("{}/shaders/flattex.glsl", root);
+    let shader_path = format!("{}/shaders/basic_ads.glsl", root);
     let post_path = format!("{}/shaders/postprocessing.glsl", root);
     // let m_path = format!("{}/models/matilda/scene.gltf", root);
     let m_path = format!("{}/models/simpler_dragon.glb", root);
@@ -31,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let model: Model<StandardVertex> = Model::load(m_path).unwrap();
 
     let mut gui_state = glboot::ImGuiState::default();
-    let mut camera = Camera::new(Point3::new(0.0, 0.0, 1.0), Vector3::new(0.0, 0.0, -1.0));
+    let mut camera = Camera::new(Point3::new(0.0, 0.3, 0.3), Vector3::new(0.0, -0.3, -0.3));
 
     let screen_quad = [
         -1.0_f32, 1.0, 0.0, 1.0, -1.0, -1.0, 0.0, 0.0, 1.0, -1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0,
@@ -73,6 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         framebuffer.unbind();
 
         post_program.bind();
+        post_program.send_uniforms();
         framebuffer.bind_texture(0);
         quad_vao.bind();
         unsafe {
@@ -101,6 +103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Matrix4::from_scale(gui_state.scale)
                     * Matrix4::from_translation(Vector3::new(0.0, -0.5, 0.0)),
             );
+            post_program.set_uniform("option", gui_state.post_option);
         }
 
         window.update();
@@ -112,6 +115,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             match event {
                 glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
                     window.set_should_close(true);
+                }
+                glfw::WindowEvent::Key(Key::R, _, Action::Press, _) => {
+                    arc.reset();
+                    program.set_uniform("arc", Matrix4::identity());
                 }
                 glfw::WindowEvent::Key(Key::W, _, Action::Press, _) => {
                     camera.pos += 2.5 * camera.front;
@@ -172,7 +179,7 @@ fn setup() -> (Window, glboot::ImGUI) {
     let imgui = glboot::ImGUI::new(&mut window);
 
     unsafe {
-        gl::Enable(gl::BLEND);
+        // gl::Enable(gl::BLEND);
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         gl::Enable(gl::DEPTH_TEST);
         gl::DepthFunc(gl::LESS);

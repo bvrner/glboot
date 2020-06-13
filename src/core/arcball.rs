@@ -1,5 +1,6 @@
 use cgmath::{InnerSpace, Point2, Quaternion, Vector3};
 
+#[derive(Debug, Copy, Clone)]
 pub struct ArcBall {
     // the dimensions of the window
     win_size: (f32, f32),
@@ -56,6 +57,12 @@ impl ArcBall {
     pub fn finish(&mut self) {
         self.is_on = false;
         self.last_rot = self.this_rot * self.last_rot;
+    }
+
+    pub fn reset(&mut self) {
+        self.is_on = false;
+        self.last_rot = Quaternion::new(1.0, 0.0, 0.0, 0.0);
+        self.this_rot = Quaternion::new(1.0, 0.0, 0.0, 0.0);
     }
 
     // get the current vector to the center of the ball

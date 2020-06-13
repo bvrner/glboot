@@ -4,7 +4,7 @@ pub mod core;
 pub mod ogl;
 
 use crate::core::ui::ImguiGLFW;
-use imgui::Context;
+use imgui::{im_str, Context, ImString};
 
 pub struct ImGUI {
     pub imgui: imgui::Context,
@@ -20,6 +20,7 @@ pub struct ImGuiState {
     pub env: bool,
     pub cam_slider: f32,
     pub scale: f32,
+    pub post_option: i32,
 }
 
 impl Default for ImGuiState {
@@ -30,6 +31,7 @@ impl Default for ImGuiState {
             env: true,
             cam_slider: 45.0,
             scale: 0.1,
+            post_option: 0,
         }
     }
 }
@@ -56,7 +58,7 @@ impl ImGUI {
             .size([300.0, 300.0], imgui::Condition::Once)
             .build(&ui, || {
                 if imgui::CollapsingHeader::new(imgui::im_str!("Object")).build(&ui) {
-                    updated |= scale(&ui, &mut state.scale);
+                    updated = updated || scale(&ui, &mut state.scale);
                 }
 
                 if imgui::CollapsingHeader::new(imgui::im_str!("Options")).build(&ui) {
@@ -75,11 +77,35 @@ impl ImGUI {
                             );
                         }
                     }
-                    updated |= options(&ui, &mut state.wireframe);
+                    updated = updated || options(&ui, &mut state.wireframe);
                 }
 
-                updated |= camera(&ui, &mut state.cam_slider);
+                updated = updated || camera(&ui, &mut state.cam_slider);
+
+                if imgui::CollapsingHeader::new(im_str!("Post-Processing")).build(&ui) {
+                    const NAMES: [&'static str; 6] = [
+                        "None",
+                        "Negative",
+                        "Black and White",
+                        "Sharp",
+                        "Blur",
+                        "Edge",
+                    ];
+
+                    for (i, name) in NAMES.iter().enumerate() {
+                        if imgui::Selectable::new(&ImString::new(name.to_owned()))
+                            .selected(state.post_option == i as i32)
+                            .build(&ui)
+                        {
+                            state.post_option = i as i32;
+                            updated = true;
+                        }
+                    }
+                }
+                ui.separator();
+                ui.text("Use WASD to move camera (WIP).\nRight click and mouse to rotate object (kinda broken in some meshs).\nR to reset the rotation.");
             });
+
         self.imgui_glfw.draw(ui, window);
         updated
     }

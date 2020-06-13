@@ -14,7 +14,7 @@ uniform mat4 default_model;
 
 void main() {
     TexCoords = aTex;
-    gl_Position = projection * view * (arc * model * default_model) * vec4(aPos, 1.0);
+    gl_Position = projection * view * (model * arc * default_model) * vec4(aPos, 1.0);
 }
 #end vertex
 

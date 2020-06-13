@@ -5,8 +5,7 @@ A personal thin abstraction over OpenGL meant to be an experiment in both CG and
 Since everything here is experimental it's not really meant to be published or used by anyone else, but I'll *try* to keep everything documented and commented, just for the sake of it.
 
 ## Current general state
-![state](https://github.com/bvrner/glboot/blob/master/shots/output.gif)
-A good amount of OpenGL was already abstracted, nothing too complex, some stuff still needs working, but it's going well.
+A good amount of OpenGL was already abstracted, nothing too complex, some stuff still needs working, but it's going well. I've ran across some performance issues, but since my current PC is really bad I don't really know if the problem is my implementation or my hardware (or both).
 
 ## Screenshots
 This is very much a work in progress, but seeing how things are is nice, so I'll put some screenshots here from times to times.

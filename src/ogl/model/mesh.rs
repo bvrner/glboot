@@ -77,7 +77,7 @@ impl<V: VertexData> Mesh<V> {
         self.vao.add_buffer(&self.vbo, &layout);
     }
 
-    fn draw(&self, shader: &mut ShaderProgram, materials: &[Material], textures: &[Texture]) {
+    fn draw(&self, shader: &mut ShaderProgram, materials: &[Material]) {
         shader.set_uniform("default_model", self.default_transform);
 
         if let Some(mat_index) = self.material {
@@ -87,15 +87,13 @@ impl<V: VertexData> Mesh<V> {
             shader.set_uniform("material.has_base_color", 1);
 
             if let Some(base_tex_index) = material.base_tex {
-                textures[base_tex_index].bind(0);
-                shader.set_uniform("material.base_tex", 0);
+                shader.set_uniform("material.base_tex", base_tex_index as i32);
                 shader.set_uniform("material.has_base_tex", 1);
             } else {
                 shader.set_uniform("material.has_base_tex", 0);
             }
         }
 
-        shader.bind();
         self.vao.bind();
         self.ibo.bind();
         shader.send_uniforms();
@@ -108,7 +106,6 @@ impl<V: VertexData> Mesh<V> {
             )
         };
 
-        shader.unbind();
         self.ibo.unbind();
         self.vao.unbind();
     }
@@ -127,22 +124,24 @@ impl<V: VertexData + Send> Model<V> {
     where
         P: AsRef<Path> + Debug,
     {
-        if let Some(ext) = path.as_ref().extension() {
-            if ext == "obj" {
-                super::loaders::load_obj(path)
-            } else if ext == "gltf" || ext == "glb" {
-                super::loaders::load_gltf(path)
-            } else {
-                Err(String::from("Unsuported file"))
-            }
-        } else {
-            Err(String::from("Unsuported file"))
+        match path.as_ref().extension() {
+            Some(ext) if ext == "obj" => super::loaders::load_obj(path),
+            Some(ext) if ext == "gltf" => super::loaders::load_gltf(path),
+            Some(ext) if ext == "glb" => super::loaders::load_gltf(path),
+            _ => Err(String::from("Unsuported file format")),
         }
     }
 
     pub fn draw(&self, shader: &mut ShaderProgram) {
-        for mesh in self.meshs.iter() {
-            mesh.draw(shader, &self.materials, &self.textures);
+        shader.bind();
+
+        for (i, tex) in self.textures.iter().enumerate() {
+            tex.bind(i as u32);
         }
+
+        for mesh in self.meshs.iter() {
+            mesh.draw(shader, &self.materials);
+        }
+        shader.unbind();
     }
 }

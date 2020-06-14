@@ -27,18 +27,20 @@ impl Texture {
             _ => unimplemented!(),
         };
 
-        unsafe { Self::from_bytes(&data, image.width() as i32, image.height() as i32, format) }
+        unsafe {
+            Ok(Self::from_bytes(
+                &data,
+                image.width() as i32,
+                image.height() as i32,
+                format,
+            ))
+        }
     }
 
     /// Creates a new texture from it's raw bytes, with the specified width, height and OpenGL's `format`.
     /// ## Safety
     /// Ill combinations of formats and/or dimensions can result in a segmentation fault.
-    pub unsafe fn from_bytes(
-        data: &[u8],
-        width: i32,
-        height: i32,
-        format: GLenum,
-    ) -> image::ImageResult<Texture> {
+    pub unsafe fn from_bytes(data: &[u8], width: i32, height: i32, format: GLenum) -> Self {
         let mut texture: GLuint = 0;
 
         gl::GenTextures(1, &mut texture);

@@ -83,14 +83,15 @@ impl ImGUI {
                 updated = updated || camera(&ui, &mut state.cam_slider);
 
                 if imgui::CollapsingHeader::new(im_str!("Post-Processing")).build(&ui) {
-                    const NAMES: [&'static str; 7] = [
+                    const NAMES: [&'static str; 8] = [
                         "None",
                         "Negative",
                         "Black and White",
                         "Sharp",
                         "Blur",
                         "Edge",
-                        "Sobel"
+                        "Sobel",
+                        "Negative Sobel",
                     ];
 
                     for (i, name) in NAMES.iter().enumerate() {
@@ -104,7 +105,12 @@ impl ImGUI {
                     }
                 }
                 ui.separator();
-                ui.text("Use WASD to move camera (WIP).\nRight click and mouse to rotate object (kinda broken in some meshs).\nR to reset the rotation.");
+                ui.text(
+                    "Use WASD to move camera (WIP).\
+                         \nRight click and mouse to rotate object (kinda broken in some meshs).\
+                         \nSpace to go up and Shift to go down.\
+                         \nR to reset the rotation.",
+                );
             });
 
         self.imgui_glfw.draw(ui, window);

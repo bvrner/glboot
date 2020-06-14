@@ -107,7 +107,7 @@ where
     //     meshs,
     // })
 
-    unimplemented!()
+    todo!()
 }
 
 pub fn load_gltf<P, V>(path: P) -> Result<Model<V>, String>
@@ -138,7 +138,6 @@ where
             unsafe {
                 Texture::from_bytes(&data.pixels, data.width as i32, data.height as i32, format)
             }
-            .unwrap()
         })
         .collect();
 

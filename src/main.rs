@@ -15,11 +15,11 @@ use glfw::{self, Action, Context, Key};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
-    // let shader_path = format!("{}/shaders/flattex.glsl", root);
-    let shader_path = format!("{}/shaders/basic_ads.glsl", root);
+    let shader_path = format!("{}/shaders/flattex.glsl", root);
+    // let shader_path = format!("{}/shaders/basic_ads.glsl", root);
     let post_path = format!("{}/shaders/postprocessing.glsl", root);
-    // let m_path = format!("{}/models/matilda/scene.gltf", root);
-    let m_path = format!("{}/models/simpler_dragon.glb", root);
+    let m_path = format!("{}/models/matilda/scene.gltf", root);
+    // let m_path = format!("{}/models/simpler_dragon.glb", root);
 
     let (mut window, mut imgui) = setup();
 
@@ -96,7 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 100f32,
             );
 
-            program.set_uniform("refraction", gui_state.env as i32);
+            // program.set_uniform("refraction", gui_state.env as i32);
             program.set_uniform("projection", proj);
             program.set_uniform(
                 "model",

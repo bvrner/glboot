@@ -114,7 +114,11 @@ void main() {
             Color = apply_kernel(edge);
             break;
         case 6:
-            Color = /*texture(screenTex, TexCoords) */ sobel_kernel();
+            Color = sobel_kernel();
+            break;
+        case 7:
+            Color = sobel_kernel();
+            Color = vec4(vec3(1.0 - Color), 1.0);
             break;
     }
 }

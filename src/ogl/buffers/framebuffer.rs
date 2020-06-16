@@ -6,6 +6,8 @@ pub struct Framebuffer {
     fbo: GLuint,
     texture: GLuint,
     rbo: GLuint,
+    width: GLsizei,
+    height: GLsizei,
 }
 
 impl Framebuffer {
@@ -77,12 +79,111 @@ impl Framebuffer {
                     fbo: id,
                     texture,
                     rbo: renderbuffer,
+                    width,
+                    height,
                 })
             }
         }
     }
 
-    pub fn update_dimensions(&self, width: GLsizei, height: GLsizei) {
+    pub fn new_multisampled(
+        width: GLsizei,
+        height: GLsizei,
+        samples: GLsizei,
+    ) -> Result<Self, String> {
+        unsafe {
+            let mut id = 0;
+            gl::GenFramebuffers(1, &mut id);
+            gl::BindFramebuffer(gl::FRAMEBUFFER, id);
+
+            let mut texture = 0;
+            gl::GenTextures(1, &mut texture);
+
+            gl::BindTexture(gl::TEXTURE_2D_MULTISAMPLE, texture);
+            gl::TexImage2DMultisample(
+                gl::TEXTURE_2D_MULTISAMPLE,
+                samples,
+                gl::RGB.try_into().unwrap(),
+                width,
+                height,
+                gl::TRUE,
+            );
+            gl::BindTexture(gl::TEXTURE_2D_MULTISAMPLE, 0);
+
+            gl::FramebufferTexture2D(
+                gl::FRAMEBUFFER,
+                gl::COLOR_ATTACHMENT0,
+                gl::TEXTURE_2D_MULTISAMPLE,
+                texture,
+                0,
+            );
+
+            let mut renderbuffer = 0;
+            gl::GenRenderbuffers(1, &mut renderbuffer);
+            gl::BindRenderbuffer(gl::RENDERBUFFER, renderbuffer);
+            gl::RenderbufferStorageMultisample(
+                gl::RENDERBUFFER,
+                samples,
+                gl::DEPTH24_STENCIL8,
+                width,
+                height,
+            );
+            gl::BindRenderbuffer(gl::RENDERBUFFER, 0);
+
+            gl::FramebufferRenderbuffer(
+                gl::FRAMEBUFFER,
+                gl::DEPTH_STENCIL_ATTACHMENT,
+                gl::RENDERBUFFER,
+                renderbuffer,
+            );
+
+            if gl::CheckFramebufferStatus(gl::FRAMEBUFFER) != gl::FRAMEBUFFER_COMPLETE {
+                gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+                gl::DeleteFramebuffers(1, &id);
+                gl::DeleteTextures(1, &texture);
+                gl::DeleteRenderbuffers(1, &renderbuffer);
+
+                Err(String::from("Framebuffer error"))
+            } else {
+                gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+
+                Ok(Framebuffer {
+                    fbo: id,
+                    texture,
+                    rbo: renderbuffer,
+                    width,
+                    height,
+                })
+            }
+        }
+    }
+
+    pub fn blit(&self, other: &Self) {
+        unsafe {
+            gl::BindFramebuffer(gl::READ_FRAMEBUFFER, self.fbo);
+            gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, other.fbo);
+
+            gl::BlitFramebuffer(
+                0,
+                0,
+                self.width,
+                self.height,
+                0,
+                0,
+                other.width,
+                other.height,
+                gl::COLOR_BUFFER_BIT,
+                gl::LINEAR,
+            );
+
+            gl::BindFramebuffer(gl::READ_FRAMEBUFFER, 0);
+            gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, 0);
+        }
+    }
+
+    pub fn update_dimensions(&mut self, width: GLsizei, height: GLsizei) {
+        self.width = width;
+        self.height = height;
         unsafe {
             gl::BindTexture(gl::TEXTURE_2D, self.texture);
             gl::TexImage2D(

@@ -69,7 +69,7 @@ impl Texture {
 
         gl::BindTexture(gl::TEXTURE_2D, 0);
 
-        Ok(Texture(texture, gl::TEXTURE_2D))
+        Texture(texture, gl::TEXTURE_2D)
     }
 
     /// Create a cubemap from a list of paths to the textures.

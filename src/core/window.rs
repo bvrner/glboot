@@ -41,7 +41,7 @@ impl Window {
         }
     }
 
-    pub fn hidden(name: &str, dimensions: (u32, u32)) -> Self {
+    pub fn hidden() -> Self {
         let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
         glfw.window_hint(WindowHint::ContextVersion(3, 3));
@@ -50,7 +50,7 @@ impl Window {
         glfw.window_hint(WindowHint::Visible(false));
 
         let (win, events) = glfw
-            .create_window(dimensions.0, dimensions.1, name, glfw::WindowMode::Windowed)
+            .create_window(1, 1, "", glfw::WindowMode::Windowed)
             .unwrap();
 
         Window {

@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let shader_path = format!("{}/shaders/flattex.glsl", root);
     // let shader_path = format!("{}/shaders/basic_ads.glsl", root);
-    let post_path = format!("{}/shaders/postprocessing.glsl", root);
+    let post_path = format!("{}/shaders/cel_outline.glsl", root);
     let m_path = format!("{}/models/matilda/scene.gltf", root);
     // let m_path = format!("{}/models/simpler_dragon.glb", root);
 
@@ -27,7 +27,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut post_program = ShaderProgram::from_file(post_path)?;
     post_program.set_uniform("screenTex", 0);
 
-    let framebuffer = Framebuffer::new(800, 600).unwrap();
+    let mut framebuffer = Framebuffer::new_multisampled(1366, 713, 8).unwrap();
+    let mut intermediate = Framebuffer::new(1366, 713).unwrap();
 
     let model: Model<StandardVertex> = Model::load(m_path).unwrap();
 
@@ -55,7 +56,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut arc = ArcBall::new(800.0, 600.0);
     let events = window.events.take().unwrap();
+    let mut last_frame = 0.0;
+
     while !window.should_close() {
+        let current_frame = window.glfw.get_time() as f32;
+        let delta_time = current_frame - last_frame;
+        last_frame = current_frame;
+
         framebuffer.bind();
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
@@ -71,11 +78,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         model.draw(&mut program);
+        framebuffer.blit(&intermediate);
         framebuffer.unbind();
 
         post_program.bind();
         post_program.send_uniforms();
-        framebuffer.bind_texture(0);
+        intermediate.bind_texture(0);
         quad_vao.bind();
         unsafe {
             gl::Disable(gl::DEPTH_TEST);
@@ -83,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::DrawArrays(gl::TRIANGLES, 0, 6);
         }
-        framebuffer.unbind_texture();
+        intermediate.unbind_texture();
         post_program.unbind();
         quad_vao.unbind();
 
@@ -112,6 +120,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             imgui.handle_event(&event);
 
             // THIS NEEDS A MAJOR REFACTOR
+            handle_cam(&mut camera, &event, &mut program, delta_time);
             match event {
                 glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
                     window.set_should_close(true);
@@ -119,22 +128,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 glfw::WindowEvent::Key(Key::R, _, Action::Press, _) => {
                     arc.reset();
                     program.set_uniform("arc", Matrix4::identity());
-                }
-                glfw::WindowEvent::Key(Key::W, _, Action::Press, _) => {
-                    camera.pos += 2.5 * camera.front;
-                    program.set_uniform("view", camera.get_matrix());
-                }
-                glfw::WindowEvent::Key(Key::Space, _, Action::Press, _) => {
-                    camera.pos += 2.5 * camera.up;
-                    program.set_uniform("view", camera.get_matrix());
-                }
-                glfw::WindowEvent::Key(Key::LeftShift, _, Action::Press, _) => {
-                    camera.pos -= 2.5 * camera.up;
-                    program.set_uniform("view", camera.get_matrix());
-                }
-                glfw::WindowEvent::Key(Key::S, _, Action::Press, _) => {
-                    camera.pos -= 2.5 * camera.front;
-                    program.set_uniform("view", camera.get_matrix());
                 }
                 glfw::WindowEvent::MouseButton(glfw::MouseButtonRight, Action::Press, _) => {
                     let point = window.get_cursor_pos();
@@ -154,6 +147,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     arc.update(w as f32, h as f32);
                     framebuffer.update_dimensions(w, h);
+                    intermediate.update_dimensions(w, h);
 
                     let proj = cgmath::perspective(
                         cgmath::Deg(gui_state.cam_slider),
@@ -172,7 +166,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn setup() -> (Window, glboot::ImGUI) {
-    let mut window = Window::new("Bootstrap", (800, 600));
+    let mut window = Window::new("Bootstrap", (1366, 713));
     window.make_current();
     window.load_gl();
 
@@ -190,4 +184,32 @@ fn setup() -> (Window, glboot::ImGUI) {
     }
 
     (window, imgui)
+}
+
+fn handle_cam(
+    camera: &mut Camera,
+    event: &glfw::WindowEvent,
+    program: &mut ShaderProgram,
+    delta: f32,
+) {
+    let cam_speed = delta * 2.5;
+    match event {
+        glfw::WindowEvent::Key(Key::W, _, _, _) => {
+            camera.pos += cam_speed * camera.front;
+            program.set_uniform("view", camera.get_matrix());
+        }
+        glfw::WindowEvent::Key(Key::Space, _, _, _) => {
+            camera.pos += cam_speed * camera.up;
+            program.set_uniform("view", camera.get_matrix());
+        }
+        glfw::WindowEvent::Key(Key::LeftShift, _, _, _) => {
+            camera.pos -= cam_speed * camera.up;
+            program.set_uniform("view", camera.get_matrix());
+        }
+        glfw::WindowEvent::Key(Key::S, _, _, _) => {
+            camera.pos -= cam_speed * camera.front;
+            program.set_uniform("view", camera.get_matrix());
+        }
+        _ => {}
+    }
 }

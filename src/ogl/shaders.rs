@@ -50,6 +50,7 @@ pub struct Shader(pub(crate) GLuint);
 pub enum ShaderKind {
     Vertex = gl::VERTEX_SHADER as isize,
     Fragment = gl::FRAGMENT_SHADER as isize,
+    Geometry = gl::GEOMETRY_SHADER as isize,
 }
 
 impl Shader {

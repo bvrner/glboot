@@ -64,12 +64,15 @@ impl ShaderProgram {
     pub fn from_shaders(
         vertex: Shader,
         frag: Shader,
-        _geo: Option<Shader>,
+        geo: Option<Shader>,
     ) -> Result<Self, ShaderError> {
         unsafe {
             let program = gl::CreateProgram();
             gl::AttachShader(program, vertex.0);
             gl::AttachShader(program, frag.0);
+            if let Some(ref geo) = geo {
+                gl::AttachShader(program, geo.0);
+            }
 
             gl::LinkProgram(program);
 
@@ -82,6 +85,9 @@ impl ShaderProgram {
             gl::DetachShader(program, vertex.0);
             gl::DetachShader(program, frag.0);
 
+            if let Some(ref geo) = geo {
+                gl::DetachShader(program, geo.0);
+            }
             Ok(ShaderProgram(program, HashMap::new()))
         }
     }
@@ -161,22 +167,23 @@ fn check_program_status(program: GLuint, which: GLenum) -> Result<(), ShaderErro
 fn process_all(src: String) -> Result<(Shader, Shader, Option<Shader>), ShaderError> {
     const V_BEGIN_MARK: &str = "#begin vertex";
     const F_BEGIN_MARK: &str = "#begin fragment";
-    // const G_BEGIN_MARK: &str = "#begin geometry";
+    const G_BEGIN_MARK: &str = "#begin geometry";
 
     const V_END_MARK: &str = "#end vertex";
     const F_END_MARK: &str = "#end fragment";
-    // const G_END_MARK: &str = "#end geometry";
+    const G_END_MARK: &str = "#end geometry";
 
-    // ugly, TODO refactor
-    let (v_begin, v_end) = (
-        src.find(V_BEGIN_MARK).unwrap(),
-        src.find(V_END_MARK).unwrap(),
-    );
-    let (f_begin, f_end) = (
-        src.find(F_BEGIN_MARK).unwrap(),
-        src.find(F_END_MARK).unwrap(),
-    );
-    // let (g_begin, g_end) = (src.find(G_BEGIN_MARK).unwrap(), src.find(G_END_MARK).unwrap());
+    // small helper closure
+    let opt_to_result = |opt: Option<usize>, err| opt.ok_or(ShaderError::SourceError(err));
+
+    let (v_begin, v_end) = (src.find(V_BEGIN_MARK), src.find(V_END_MARK));
+    let (f_begin, f_end) = (src.find(F_BEGIN_MARK), src.find(F_END_MARK));
+    let geometry = (src.find(G_BEGIN_MARK), src.find(G_END_MARK));
+
+    let v_begin = opt_to_result(v_begin, "No begin point for vertex shader".to_owned())?;
+    let v_end = opt_to_result(v_end, "No end point for vertex shader".to_owned())?;
+    let f_begin = opt_to_result(f_begin, "No begin point for fragment shader".to_owned())?;
+    let f_end = opt_to_result(f_end, "No end point for fragment shader".to_owned())?;
 
     let v_shader = Shader::from_source(
         &src[(v_begin + V_BEGIN_MARK.len())..v_end],
@@ -187,7 +194,27 @@ fn process_all(src: String) -> Result<(Shader, Shader, Option<Shader>), ShaderEr
         ShaderKind::Fragment,
     )?;
 
-    Ok((v_shader, f_shader, None))
+    // oh god is that ugly
+    // I could use Option's `zip` to make it more readable but I don't want to go to nightly
+    let g_shader = match geometry {
+        (Some(begin), Some(end)) => Some(Shader::from_source(
+            &src[(begin + G_BEGIN_MARK.len()..end)],
+            ShaderKind::Geometry,
+        )?),
+        (None, None) => None,
+        (None, _) => {
+            return Err(ShaderError::SourceError(
+                "No begin point for geometry shader".to_owned(),
+            ))
+        }
+        (_, None) => {
+            return Err(ShaderError::SourceError(
+                "No end point for geometry shader".to_owned(),
+            ))
+        }
+    };
+
+    Ok((v_shader, f_shader, g_shader))
 }
 
 impl Drop for ShaderProgram {

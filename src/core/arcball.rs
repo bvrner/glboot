@@ -70,8 +70,8 @@ impl ArcBall {
         let mut temp = self.current;
 
         // normalize the coordinates
-        temp.x = (2.0 * temp.x - self.win_size.0) / self.win_size.0;
-        temp.y = -(2.0 * temp.y - self.win_size.1) / self.win_size.1;
+        temp.x = 1.0 * temp.x / self.win_size.0 * 2.0 - 1.0;
+        temp.y = -(1.0 * temp.y / self.win_size.1 * 2.0 - 1.0);
 
         // get the length of the vector
         let len = (temp.x * temp.x) + (temp.y * temp.y);

@@ -78,6 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let delta_time = current_frame - last_frame;
         last_frame = current_frame;
 
+        // first pass, render scene to texture
         framebuffer.bind();
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
@@ -93,9 +94,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         model.draw(&mut program.borrow_mut());
-        framebuffer.blit(&intermediate);
         framebuffer.unbind();
+        // copy data from fbo to another, needed for anti-aliasing
+        framebuffer.blit(&intermediate);
 
+        // second pass, render that texture to the screen
         {
             let post_program = post_program.borrow();
             post_program.bind();
@@ -114,23 +117,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         imgui.draw(&mut window, &mut gui_state);
-        //     let (w, h) = window.get_framebuffer_size();
-        //     let proj = cgmath::perspective(
-        //         cgmath::Deg(gui_state.cam_slider),
-        //         w as f32 / h as f32,
-        //         0.1_f32,
-        //         100f32,
-        //     );
-
-        //     // program.set_uniform("refraction", gui_state.env as i32);
-        //     program.set_uniform("projection", proj);
-        //     program.set_uniform(
-        //         "model",
-        //         Matrix4::from_scale(gui_state.scale)
-        //             * Matrix4::from_translation(Vector3::new(0.0, -0.5, 0.0)),
-        //     );
-        //     post_program.set_uniform("option", gui_state.post_option);
-        // }
 
         window.update();
 

@@ -21,7 +21,7 @@ in vec2 TexCoords;
 uniform sampler2D screenTex;
 
 void main() {
-    Color = texture(screenTex, TexCoords);
+    Color = vec4(texture(screenTex, TexCoords).rgb, 1.0);
     // Color = vec4(1.0, 1.0, 1.0, 1.0);
 }
 

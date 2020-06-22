@@ -6,6 +6,7 @@ Since everything here is experimental it's not really meant to be published or u
 
 ## Current general state
 A good amount of OpenGL was already abstracted, nothing too complex, some stuff still needs working, but it's going well. I've ran across some performance issues, but since my current PC is really bad I don't really know if the problem is my implementation or my hardware (or both).
+There's also a bug with the framebuffers that makes stuff get weird when the window is resized.
 
 ## Screenshots
 This is very much a work in progress, but seeing how things are is nice, so I'll put some screenshots here from times to times.

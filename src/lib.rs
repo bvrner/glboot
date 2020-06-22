@@ -6,14 +6,19 @@ pub mod ogl;
 use crate::core::ui::ImguiGLFW;
 use imgui::{im_str, Context, ImString};
 
+use ogl::program::ShaderProgram;
+use std::{cell::RefCell, rc::Rc};
+
 pub struct ImGUI {
-    pub imgui: imgui::Context,
+    pub imgui: RefCell<imgui::Context>,
     pub imgui_glfw: ImguiGLFW,
+    main_shader: Rc<RefCell<ShaderProgram>>,
+    post_shader: Rc<RefCell<ShaderProgram>>,
 }
 
 // This is a pretty wack way to deal with options
 // I'll have to rethink it later
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct ImGuiState {
     pub bg_color: [f32; 4],
     pub wireframe: bool,
@@ -37,36 +42,50 @@ impl Default for ImGuiState {
 }
 
 impl ImGUI {
-    pub fn new(window: &mut glfw::Window) -> Self {
+    pub fn new(
+        window: &mut glfw::Window,
+        main_shader: Rc<RefCell<ShaderProgram>>,
+        post_shader: Rc<RefCell<ShaderProgram>>,
+    ) -> Self {
         let mut imgui = Context::create();
         imgui.set_ini_filename(None);
         let imgui_glfw = ImguiGLFW::new(&mut imgui, window);
 
-        ImGUI { imgui, imgui_glfw }
+        ImGUI {
+            imgui: RefCell::new(imgui),
+            imgui_glfw,
+            main_shader,
+            post_shader,
+        }
     }
 
     #[inline]
     pub fn handle_event(&mut self, event: &glfw::WindowEvent) {
-        self.imgui_glfw.handle_event(&mut self.imgui, event);
+        self.imgui_glfw
+            .handle_event(&mut self.imgui.borrow_mut(), event);
     }
 
-    pub fn draw(&mut self, window: &mut glfw::Window, state: &mut ImGuiState) -> bool {
-        let ui = self.imgui_glfw.frame(window, &mut self.imgui);
-        let mut updated = false;
+    pub fn draw(&mut self, window: &mut glfw::Window, state: &mut ImGuiState) {
+        let mut imgui = self.imgui.borrow_mut();
+        let ui = self.imgui_glfw.frame(window, &mut imgui);
 
         imgui::Window::new(imgui::im_str!("Playground"))
             .size([300.0, 300.0], imgui::Condition::Once)
             .build(&ui, || {
                 if imgui::CollapsingHeader::new(imgui::im_str!("Object")).build(&ui) {
-                    updated = updated || scale(&ui, &mut state.scale);
-                }
+                    if imgui::Slider::new(imgui::im_str!("Scale"), 0.000000001..=1.0)
+                        .build(&ui, &mut state.scale)
+                    {
+                        self.main_shader
+                            .borrow_mut()
+                            .set_uniform("model", cgmath::Matrix4::from_scale(state.scale));
+                    }
 
+                    ui.checkbox(imgui::im_str!("Wireframe"), &mut state.wireframe);
+                }
                 if imgui::CollapsingHeader::new(imgui::im_str!("Options")).build(&ui) {
-                    if imgui::ColorEdit::new(
-                        imgui::im_str!("Background color"),
-                        &mut state.bg_color,
-                    )
-                    .build(&ui)
+                    if imgui::ColorEdit::new(imgui::im_str!("Clear color"), &mut state.bg_color)
+                        .build(&ui)
                     {
                         unsafe {
                             gl::ClearColor(
@@ -77,10 +96,24 @@ impl ImGUI {
                             );
                         }
                     }
-                    updated = updated || options(&ui, &mut state.wireframe);
                 }
 
-                updated = updated || camera(&ui, &mut state.cam_slider);
+                if imgui::CollapsingHeader::new(imgui::im_str!("Camera")).build(&ui) {
+                    if imgui::Slider::new(imgui::im_str!("FOV"), 0.1..=90.0)
+                        .build(&ui, &mut state.cam_slider)
+                    {
+                        let (w, h) = window.get_framebuffer_size();
+                        let proj = cgmath::perspective(
+                            cgmath::Deg(state.cam_slider),
+                            w as f32 / h as f32,
+                            0.1_f32,
+                            100f32,
+                        );
+                        self.main_shader
+                            .borrow_mut()
+                            .set_uniform("projection", proj);
+                    }
+                }
 
                 if imgui::CollapsingHeader::new(im_str!("Post-Processing")).build(&ui) {
                     const NAMES: [&'static str; 8] = [
@@ -100,7 +133,9 @@ impl ImGUI {
                             .build(&ui)
                         {
                             state.post_option = i as i32;
-                            updated = true;
+                            self.post_shader
+                                .borrow_mut()
+                                .set_uniform("option", state.post_option);
                         }
                     }
                 }
@@ -114,13 +149,6 @@ impl ImGUI {
             });
 
         self.imgui_glfw.draw(ui, window);
-        updated
-    }
-
-    pub fn is_mouse_down(&mut self, window: &mut glfw::Window, button: imgui::MouseButton) -> bool {
-        let ui = self.imgui_glfw.frame(window, &mut self.imgui);
-
-        ui.is_mouse_down(button)
     }
 }
 
@@ -137,21 +165,25 @@ impl ImGUI {
 //     ui.checkbox(imgui::im_str!("Refraction|Reflection"), clicked)
 // }
 
-#[inline]
-fn options(ui: &imgui::Ui, clicked: &mut bool) -> bool {
-    ui.checkbox(imgui::im_str!("Wireframe"), clicked)
-}
+// #[inline]
+// fn options(ui: &imgui::Ui, clicked: &mut bool) -> bool {
+//     ui.checkbox(imgui::im_str!("Wireframe"), clicked)
+// }
 
-#[inline]
-fn camera(ui: &imgui::Ui, fov: &mut f32) -> bool {
-    if imgui::CollapsingHeader::new(imgui::im_str!("Camera")).build(ui) {
-        imgui::Slider::new(imgui::im_str!("FOV"), 0.1..=90.0).build(&ui, fov)
-    } else {
-        false
-    }
-}
+// #[inline]
+// fn camera(ui: &imgui::Ui, fov: &mut f32) -> bool {
+//     if imgui::CollapsingHeader::new(imgui::im_str!("Camera")).build(ui) {
+//         imgui::Slider::new(imgui::im_str!("FOV"), 0.1..=90.0).build(&ui, fov)
+//     } else {
+//         false
+//     }
+// }
 
-#[inline]
-fn scale(ui: &imgui::Ui, scale: &mut f32) -> bool {
-    imgui::Slider::new(imgui::im_str!("Scale"), 0.000000001..=1.0).build(&ui, scale)
-}
+// #[inline]
+// fn scale(ui: &imgui::Ui, gui: &mut ImGUI) -> bool {
+//     let mut val = 0.0;
+//     if imgui::Slider::new(imgui::im_str!("Scale"), 0.000000001..=1.0).build(&ui, &mut val) {
+//         gui.main_shader.borrow_mut().set_uniform("model", val);
+//     }
+//     true
+// }

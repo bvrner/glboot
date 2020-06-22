@@ -154,9 +154,7 @@ impl FramebufferBuilder {
             if gl::CheckFramebufferStatus(gl::FRAMEBUFFER) != gl::FRAMEBUFFER_COMPLETE {
                 gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
                 gl::DeleteFramebuffers(1, &fbo);
-                for texture in textures.into_iter() {
-                    gl::DeleteTextures(1, &texture)
-                }
+                gl::DeleteTextures(textures.len() as i32, textures.as_ptr());
                 if rbo != 0 {
                     gl::DeleteRenderbuffers(1, &rbo)
                 };
@@ -204,7 +202,7 @@ impl Framebuffer {
                 other.width,
                 other.height,
                 gl::COLOR_BUFFER_BIT,
-                gl::LINEAR,
+                gl::NEAREST,
             );
 
             gl::BindFramebuffer(gl::READ_FRAMEBUFFER, 0);
@@ -287,9 +285,7 @@ impl Framebuffer {
 impl Drop for Framebuffer {
     fn drop(&mut self) {
         unsafe {
-            for texture in self.textures.iter() {
-                gl::DeleteTextures(1, texture);
-            }
+            gl::DeleteTextures(self.textures.len() as i32, self.textures.as_ptr());
             if self.rbo != 0 {
                 gl::DeleteRenderbuffers(1, &self.rbo);
             }

@@ -1,8 +1,10 @@
 //TODO refactor this whole mess
 
+use std::{cell::RefCell, rc::Rc};
+
 use glboot::core::{arcball::ArcBall, camera::Camera, window::Window};
 use glboot::ogl::{
-    buffers::{Framebuffer, VertexArray, VertexBuffer},
+    buffers::{FramebufferBuilder, VertexArray, VertexBuffer},
     model::mesh::Model,
     model::StandardVertex,
     program::ShaderProgram,
@@ -17,18 +19,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let shader_path = format!("{}/shaders/flattex.glsl", root);
     // let shader_path = format!("{}/shaders/basic_ads.glsl", root);
-    let post_path = format!("{}/shaders/cel_outline.glsl", root);
+    let post_path = format!("{}/shaders/flat_post.glsl", root);
     let m_path = format!("{}/models/matilda/scene.gltf", root);
     // let m_path = format!("{}/models/simpler_dragon.glb", root);
 
-    let (mut window, mut imgui) = setup();
+    let mut window = setup();
 
-    let mut program = ShaderProgram::from_file(shader_path)?;
-    let mut post_program = ShaderProgram::from_file(post_path)?;
-    post_program.set_uniform("screenTex", 0);
+    let program = ShaderProgram::from_file(shader_path)?;
+    let post_program = ShaderProgram::from_file(post_path)?;
 
-    let mut framebuffer = Framebuffer::new_multisampled(1366, 713, 8).unwrap();
-    let mut intermediate = Framebuffer::new(1366, 713).unwrap();
+    let program = Rc::new(RefCell::new(program));
+    let post_program = Rc::new(RefCell::new(post_program));
+
+    post_program.borrow_mut().set_uniform("screenTex", 0);
+
+    let mut imgui = glboot::ImGUI::new(&mut window, program.clone(), post_program.clone());
+    let mut framebuffer = FramebufferBuilder::new(1366, 713)
+        .with_depth()
+        .with_stencil()
+        .with_samples(4)
+        .build()
+        .unwrap();
+    let mut intermediate = FramebufferBuilder::new(1366, 713).build().unwrap();
 
     let model: Model<StandardVertex> = Model::load(m_path).unwrap();
 
@@ -46,15 +58,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     quad_vao.add_buffer(&quad_vbo, &layout);
 
-    program.set_uniform(
-        "projection",
-        cgmath::perspective(cgmath::Deg(45.0_f32), 800.0 / 600.0, 0.1_f32, 100f32),
-    );
-    program.set_uniform("view", camera.get_matrix());
-    program.set_uniform("model", Matrix4::from_scale(0.1));
-    program.set_uniform("arc", Matrix4::identity());
+    {
+        let mut program = program.borrow_mut();
+        program.set_uniform(
+            "projection",
+            cgmath::perspective(cgmath::Deg(45.0_f32), 1366.0 / 713.0, 0.1_f32, 100f32),
+        );
+        program.set_uniform("view", camera.get_matrix());
+        program.set_uniform("model", Matrix4::from_scale(0.1));
+        program.set_uniform("arc", Matrix4::identity());
+    }
 
-    let mut arc = ArcBall::new(800.0, 600.0);
+    let mut arc = ArcBall::new(1366.0, 713.0);
     let events = window.events.take().unwrap();
     let mut last_frame = 0.0;
 
@@ -65,8 +80,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         framebuffer.bind();
         unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::Enable(gl::DEPTH_TEST);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::PolygonMode(
                 gl::FRONT_AND_BACK,
                 if gui_state.wireframe {
@@ -77,42 +92,45 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
 
-        model.draw(&mut program);
+        model.draw(&mut program.borrow_mut());
         framebuffer.blit(&intermediate);
         framebuffer.unbind();
 
-        post_program.bind();
-        post_program.send_uniforms();
-        intermediate.bind_texture(0);
-        quad_vao.bind();
-        unsafe {
-            gl::Disable(gl::DEPTH_TEST);
-            gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-            gl::DrawArrays(gl::TRIANGLES, 0, 6);
+        {
+            let post_program = post_program.borrow();
+            post_program.bind();
+            post_program.send_uniforms();
+            intermediate.bind_textures(0);
+            quad_vao.bind();
+            unsafe {
+                gl::Disable(gl::DEPTH_TEST);
+                gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
+                gl::Clear(gl::COLOR_BUFFER_BIT);
+                gl::DrawArrays(gl::TRIANGLES, 0, 6);
+            }
+            intermediate.unbind_textures();
+            post_program.unbind();
+            quad_vao.unbind();
         }
-        intermediate.unbind_texture();
-        post_program.unbind();
-        quad_vao.unbind();
 
-        if imgui.draw(&mut window, &mut gui_state) {
-            let (w, h) = window.get_framebuffer_size();
-            let proj = cgmath::perspective(
-                cgmath::Deg(gui_state.cam_slider),
-                w as f32 / h as f32,
-                0.1_f32,
-                100f32,
-            );
+        imgui.draw(&mut window, &mut gui_state);
+        //     let (w, h) = window.get_framebuffer_size();
+        //     let proj = cgmath::perspective(
+        //         cgmath::Deg(gui_state.cam_slider),
+        //         w as f32 / h as f32,
+        //         0.1_f32,
+        //         100f32,
+        //     );
 
-            // program.set_uniform("refraction", gui_state.env as i32);
-            program.set_uniform("projection", proj);
-            program.set_uniform(
-                "model",
-                Matrix4::from_scale(gui_state.scale)
-                    * Matrix4::from_translation(Vector3::new(0.0, -0.5, 0.0)),
-            );
-            post_program.set_uniform("option", gui_state.post_option);
-        }
+        //     // program.set_uniform("refraction", gui_state.env as i32);
+        //     program.set_uniform("projection", proj);
+        //     program.set_uniform(
+        //         "model",
+        //         Matrix4::from_scale(gui_state.scale)
+        //             * Matrix4::from_translation(Vector3::new(0.0, -0.5, 0.0)),
+        //     );
+        //     post_program.set_uniform("option", gui_state.post_option);
+        // }
 
         window.update();
 
@@ -120,6 +138,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             imgui.handle_event(&event);
 
             // THIS NEEDS A MAJOR REFACTOR
+            let mut program = program.borrow_mut();
             handle_cam(&mut camera, &event, &mut program, delta_time);
             match event {
                 glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
@@ -146,8 +165,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     unsafe { gl::Viewport(0, 0, w, h) };
 
                     arc.update(w as f32, h as f32);
-                    framebuffer.update_dimensions(w, h);
-                    intermediate.update_dimensions(w, h);
+                    // framebuffer.update_dimensions(w, h);
+                    // intermediate.update_dimensions(w, h);
 
                     let proj = cgmath::perspective(
                         cgmath::Deg(gui_state.cam_slider),
@@ -165,12 +184,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn setup() -> (Window, glboot::ImGUI) {
+fn setup() -> Window {
     let mut window = Window::new("Bootstrap", (1366, 713));
     window.make_current();
     window.load_gl();
-
-    let imgui = glboot::ImGUI::new(&mut window);
 
     unsafe {
         // gl::Enable(gl::BLEND);
@@ -183,7 +200,7 @@ fn setup() -> (Window, glboot::ImGUI) {
         gl::Enable(gl::MULTISAMPLE);
     }
 
-    (window, imgui)
+    window
 }
 
 fn handle_cam(

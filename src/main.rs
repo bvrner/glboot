@@ -34,13 +34,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     post_program.borrow_mut().set_uniform("screenTex", 0);
 
     let mut imgui = glboot::ImGUI::new(&mut window, program.clone(), post_program.clone());
-    let mut framebuffer = FramebufferBuilder::new(1366, 713)
+    let framebuffer = FramebufferBuilder::new(1366, 713)
         .with_depth()
         .with_stencil()
         .with_samples(4)
         .build()
         .unwrap();
-    let mut intermediate = FramebufferBuilder::new(1366, 713).build().unwrap();
+    let intermediate = FramebufferBuilder::new(1366, 713).build().unwrap();
 
     let model: Model<StandardVertex> = Model::load(m_path).unwrap();
 

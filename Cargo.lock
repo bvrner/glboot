@@ -342,9 +342,9 @@ dependencies = [
 
 [[package]]
 name = "glfw"
-version = "0.38.0"
+version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07afd5f1b258f091893e4a83b3acd91bb031a293186f614a119d650ad0faf7ac"
+checksum = "88df99ca57039944669d3757663da12f732ffad2bd83bfef1ffca6d92b4b2990"
 dependencies = [
  "bitflags",
  "glfw-sys",

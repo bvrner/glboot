@@ -1,4 +1,4 @@
-use cgmath::{InnerSpace, Point2, Quaternion, Vector3};
+use cgmath::{InnerSpace, Point2, Quaternion, Rotation3, Vector3};
 
 #[derive(Debug, Copy, Clone)]
 pub struct ArcBall {
@@ -51,6 +51,7 @@ impl ArcBall {
 
         // since both vectors are normalized their dot will give us the angle of rotation
         self.this_rot = Quaternion::from_sv(self.click_vec.dot(self.drag_vec), perp);
+        // Quaternion::from_axis_angle(perp, cgmath::Deg(self.click_vec.dot(self.drag_vec)));
         self.this_rot * self.last_rot
     }
 
@@ -76,10 +77,10 @@ impl ArcBall {
         // get the length of the vector
         let len = (temp.x * temp.x) + (temp.y * temp.y);
 
-        if len > 1.0 {
-            Vector3::new(temp.x, temp.y, 0.0).normalize()
+        if len <= 1.0 * 1.0 {
+            Vector3::new(temp.x, temp.y, (1.0 * 1.0 - len).sqrt())
         } else {
-            Vector3::new(temp.x, temp.y, (1.0 - len).sqrt())
+            Vector3::new(temp.x, temp.y, 0.0).normalize()
         }
     }
 }

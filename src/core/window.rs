@@ -12,6 +12,8 @@ pub struct Window {
     pub glfw: ManuallyDrop<glfw::Glfw>,
     win: ManuallyDrop<glfw::Window>,
     pub events: Option<Receiver<(f64, glfw::WindowEvent)>>,
+    pub width: u32,
+    pub height: u32,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -35,9 +37,11 @@ impl Window {
         win.set_all_polling(true);
         win.set_sticky_keys(true);
         Window {
-            win: ManuallyDrop::new(win),
             glfw: ManuallyDrop::new(glfw),
+            win: ManuallyDrop::new(win),
             events: Some(events),
+            width: dimensions.0,
+            height: dimensions.1,
         }
     }
 
@@ -57,6 +61,8 @@ impl Window {
             win: ManuallyDrop::new(win),
             glfw: ManuallyDrop::new(glfw),
             events: Some(events),
+            width: 0,
+            height: 0,
         }
     }
 

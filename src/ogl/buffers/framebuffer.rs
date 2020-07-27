@@ -181,8 +181,8 @@ pub struct Framebuffer {
     fbo: GLuint,
     textures: Vec<GLuint>,
     rbo: GLuint,
-    width: GLsizei,
-    height: GLsizei,
+    pub width: GLsizei,
+    pub height: GLsizei,
     samples: Option<GLsizei>,
 }
 

@@ -81,6 +81,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // first pass, render scene to texture
         framebuffer.bind();
         unsafe {
+            gl::Viewport(0, 0, framebuffer.width, framebuffer.height);
             gl::Enable(gl::DEPTH_TEST);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::PolygonMode(
@@ -106,6 +107,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             intermediate.bind_textures(0);
             quad_vao.bind();
             unsafe {
+                gl::Viewport(0, 0, window.width as i32, window.height as i32);
                 gl::Disable(gl::DEPTH_TEST);
                 gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
                 gl::Clear(gl::COLOR_BUFFER_BIT);
@@ -148,7 +150,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 glfw::WindowEvent::FramebufferSize(w, h) => {
-                    unsafe { gl::Viewport(0, 0, w, h) };
+                    // unsafe { gl::Viewport(0, 0, w, h) };
+                    window.width = w as u32;
+                    window.height = h as u32;
 
                     arc.update(w as f32, h as f32);
                     // framebuffer.update_dimensions(w, h);

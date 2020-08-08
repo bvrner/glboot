@@ -1,16 +1,11 @@
-// use glfw::Context;
-// use glfw::WindowHint;
 use glfw::{Context, WindowHint};
 use std::{
-    mem::ManuallyDrop,
     ops::{Deref, DerefMut},
     sync::mpsc::Receiver,
 };
 
 pub struct Window {
-    // if glfw is droped before the window we will panic
-    pub glfw: ManuallyDrop<glfw::Glfw>,
-    win: ManuallyDrop<glfw::Window>,
+    win: glfw::Window,
     pub events: Option<Receiver<(f64, glfw::WindowEvent)>>,
     pub width: u32,
     pub height: u32,
@@ -37,8 +32,7 @@ impl Window {
         win.set_all_polling(true);
         win.set_sticky_keys(true);
         Window {
-            glfw: ManuallyDrop::new(glfw),
-            win: ManuallyDrop::new(win),
+            win,
             events: Some(events),
             width: dimensions.0,
             height: dimensions.1,
@@ -58,8 +52,7 @@ impl Window {
             .unwrap();
 
         Window {
-            win: ManuallyDrop::new(win),
-            glfw: ManuallyDrop::new(glfw),
+            win,
             events: Some(events),
             width: 0,
             height: 0,
@@ -73,25 +66,9 @@ impl Window {
 
     #[inline]
     pub fn update(&mut self) {
-        self.glfw.poll_events();
+        self.win.glfw.poll_events();
         self.win.swap_buffers();
     }
-
-    // pub fn process_events<F>(&mut self, mut callback: F)
-    // where
-    //     F: FnMut(&glfw::WindowEvent) -> ControlFlow,
-    // {
-    //     self.glfw.poll_events();
-
-    //     let mut flow = ControlFlow::Continue;
-    //     for (_, event) in glfw::flush_messages(&self.events) {
-    //         flow = callback(&event);
-    //     }
-
-    //     if flow == ControlFlow::Quit {
-    //         self.set_should_close(true);
-    //     }
-    // }
 }
 
 impl Deref for Window {
@@ -105,14 +82,5 @@ impl Deref for Window {
 impl DerefMut for Window {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.win
-    }
-}
-
-impl Drop for Window {
-    fn drop(&mut self) {
-        unsafe {
-            ManuallyDrop::drop(&mut self.win);
-            ManuallyDrop::drop(&mut self.glfw);
-        }
     }
 }

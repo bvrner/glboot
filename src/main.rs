@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let shader_path = format!("{}/shaders/flattex.glsl", root);
     // let shader_path = format!("{}/shaders/basic_ads.glsl", root);
-    let post_path = format!("{}/shaders/flat_post.glsl", root);
+    let post_path = format!("{}/shaders/postprocessing.glsl", root);
     let m_path = format!("{}/models/matilda/scene.gltf", root);
     // let m_path = format!("{}/models/simpler_dragon.glb", root);
 
@@ -150,13 +150,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 glfw::WindowEvent::FramebufferSize(w, h) => {
-                    // unsafe { gl::Viewport(0, 0, w, h) };
                     window.width = w as u32;
                     window.height = h as u32;
 
                     arc.update(w as f32, h as f32);
-                    // framebuffer.update_dimensions(w, h);
-                    // intermediate.update_dimensions(w, h);
 
                     let proj = cgmath::perspective(
                         cgmath::Deg(gui_state.cam_slider),

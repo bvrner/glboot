@@ -23,7 +23,7 @@ impl Window {
 
         glfw.window_hint(WindowHint::ContextVersion(3, 3));
         glfw.window_hint(WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
-        glfw.window_hint(WindowHint::Samples(Some(4)));
+        // glfw.window_hint(WindowHint::Samples(Some(4)));
 
         let (mut win, events) = glfw
             .create_window(dimensions.0, dimensions.1, name, glfw::WindowMode::Windowed)

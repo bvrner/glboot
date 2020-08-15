@@ -11,10 +11,12 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform mat4 arc;
 uniform mat4 default_model;
+uniform mat4 global;
 
 void main() {
     TexCoords = aTex;
-    gl_Position = projection * view * (model * arc * default_model) * vec4(aPos, 1.0);
+    gl_Position = projection * view * (model * global * arc * default_model) * vec4(aPos, 1.0);
+    // gl_Position = projection * view * (default_model * arc * global * model) * vec4(aPos, 1.0);
 }
 #end vertex
 

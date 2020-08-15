@@ -206,6 +206,7 @@ where
         meshs,
         textures,
         materials,
+        sphere: (Vector3::new(0.0, 0.0, 0.0), 0.0),
     })
 }
 
@@ -241,7 +242,14 @@ fn process_node<V: VertexData>(
                     indices.extend(ind.into_u32());
                 }
 
-                Mesh::new(V::from_raw(raw), indices, material, node_transform)
+                let bounds = primitive.bounding_box();
+                Mesh::new(
+                    V::from_raw(raw),
+                    indices,
+                    material,
+                    node_transform,
+                    (bounds.min.into(), bounds.max.into()),
+                )
             })
             .collect()
     })

@@ -20,8 +20,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let shader_path = format!("{}/shaders/flattex.glsl", root);
     // let shader_path = format!("{}/shaders/basic_ads.glsl", root);
     let post_path = format!("{}/shaders/flat_post.glsl", root);
-    // let m_path = format!("{}/models/bunny.glb", root);
-    let m_path = format!("{}/models/simpler_dragon.glb", root);
+    let m_path = format!("{}/models/matilda/scene.gltf", root);
+    // let m_path = format!("{}/models/back/scene.gltf", root);
 
     let mut window = setup();
 

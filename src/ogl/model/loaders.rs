@@ -249,6 +249,7 @@ fn process_node<V: VertexData>(
                     material,
                     node_transform,
                     (bounds.min.into(), bounds.max.into()),
+                    primitive.mode().as_gl_enum(),
                 )
             })
             .collect()

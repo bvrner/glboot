@@ -159,6 +159,7 @@ impl<V: VertexData + Send> Model<V> {
         shader.unbind();
     }
 
+    // see https://www.researchgate.net/publication/242453691_An_Efficient_Bounding_Sphere
     fn calculate_bounding_sphere(&mut self) {
         let (mut sphere_center, mut radius) = self.find_initial_sphere();
         let mut rad_sq = radius * radius;

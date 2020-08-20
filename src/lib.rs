@@ -151,39 +151,3 @@ impl ImGUI {
         self.imgui_glfw.draw(ui, window);
     }
 }
-
-// #[inline]
-// fn color_picker(ui: &imgui::Ui, colors: &mut [f32; 3]) -> bool {
-//     imgui::ColorPicker::new(imgui::im_str!("Pick a Color"), colors)
-//         .alpha(false)
-//         .display_rgb(true)
-//         .build(&ui)
-// }
-
-// #[inline]
-// fn env_option(ui: &imgui::Ui, clicked: &mut bool) -> bool {
-//     ui.checkbox(imgui::im_str!("Refraction|Reflection"), clicked)
-// }
-
-// #[inline]
-// fn options(ui: &imgui::Ui, clicked: &mut bool) -> bool {
-//     ui.checkbox(imgui::im_str!("Wireframe"), clicked)
-// }
-
-// #[inline]
-// fn camera(ui: &imgui::Ui, fov: &mut f32) -> bool {
-//     if imgui::CollapsingHeader::new(imgui::im_str!("Camera")).build(ui) {
-//         imgui::Slider::new(imgui::im_str!("FOV"), 0.1..=90.0).build(&ui, fov)
-//     } else {
-//         false
-//     }
-// }
-
-// #[inline]
-// fn scale(ui: &imgui::Ui, gui: &mut ImGUI) -> bool {
-//     let mut val = 0.0;
-//     if imgui::Slider::new(imgui::im_str!("Scale"), 0.000000001..=1.0).build(&ui, &mut val) {
-//         gui.main_shader.borrow_mut().set_uniform("model", val);
-//     }
-//     true
-// }

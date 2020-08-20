@@ -20,8 +20,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let shader_path = format!("{}/shaders/flattex.glsl", root);
     // let shader_path = format!("{}/shaders/basic_ads.glsl", root);
     let post_path = format!("{}/shaders/flat_post.glsl", root);
-    let m_path = format!("{}/models/matilda/scene.gltf", root);
-    // let m_path = format!("{}/models/back/scene.gltf", root);
+    // let m_path = format!("{}/models/matilda/scene.gltf", root);
+    let m_path = format!("{}/models/back/scene.gltf", root);
+    // let m_path = format!("{}/models/dragon.glb", root);
 
     let mut window = setup();
 
@@ -45,7 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let model: Model<StandardVertex> = Model::load(m_path).unwrap();
 
     let mut gui_state = glboot::ImGuiState::default();
-    let mut camera = Camera::new(Point3::new(0.0, 0.0, 1.0), Vector3::new(0.0, 0.0, -1.0));
+    let mut camera = Camera::new(Point3::new(0.0, 0.0, 15.0), Vector3::new(0.0, 0.0, -1.0));
 
     let screen_quad = [
         -1.0_f32, 1.0, 0.0, 1.0, -1.0, -1.0, 0.0, 0.0, 1.0, -1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0,
@@ -65,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cgmath::perspective(cgmath::Deg(45.0_f32), 1366.0 / 713.0, 0.1_f32, 100f32),
         );
         program.set_uniform("view", camera.get_matrix());
-        // program.set_uniform("model", Matrix4::from_scale(0.1));
+        program.set_uniform("model", Matrix4::from_scale(0.1));
         program.set_uniform("arc", Matrix4::identity());
     }
 

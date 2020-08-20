@@ -216,7 +216,7 @@ fn process_node<V: VertexData>(
     transform: Matrix4<f32>,
 ) -> Option<Vec<Mesh<V>>> {
     let node_transform: Matrix4<f32> = node.transform().matrix().into();
-    let node_transform = node_transform * transform;
+    let node_transform = transform * node_transform;
 
     node.mesh().map(|mesh| {
         mesh.primitives()

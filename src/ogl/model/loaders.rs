@@ -1,4 +1,4 @@
-use super::mesh::{Material, Mesh, Model};
+use super::{Material, Mesh, Model};
 use crate::ogl::texture::Texture;
 use cgmath::{Matrix4, Vector2, Vector3};
 

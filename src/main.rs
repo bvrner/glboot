@@ -5,7 +5,7 @@ use std::{cell::RefCell, rc::Rc};
 use glboot::core::{arcball::ArcBall, camera::Camera, window::Window};
 use glboot::ogl::{
     buffers::{FramebufferBuilder, VertexArray, VertexBuffer},
-    model::mesh::Model,
+    model::Model,
     model::StandardVertex,
     program::ShaderProgram,
     // texture::Texture,

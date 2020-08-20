@@ -34,15 +34,17 @@ impl<V: VertexData + Send> Model<V> {
     pub fn draw(&self, shader: &mut ShaderProgram) {
         shader.bind();
 
+        // let mut p = -self.sphere.0;
+        // p.z = -50.0;
         let scale =
             self.sphere.0.distance(Vector3::new(0.0, 0.0, 15.0)) * (45f32.to_radians() / 2.0).sin();
         shader.set_uniform(
             "global",
-            /*Matrix4::from_translation(-self.sphere.0), */
+            // Matrix4::from_translation(-self.sphere.0) * // aaa
             Matrix4::from_scale(scale / self.sphere.1),
         );
 
-        shader.set_uniform("global", Matrix4::from_scale(0.1));
+        // shader.set_uniform("global", Matrix4::from_scale(0.1));
         for (i, tex) in self.textures.iter().enumerate() {
             tex.bind(i as u32);
         }

@@ -1,10 +1,7 @@
-use std::{fmt::Debug, path::Path};
-
+use super::{loaders, Material, Mesh, VertexData};
 use crate::ogl::{program::ShaderProgram, texture::Texture};
-
-use super::{Material, Mesh, VertexData};
-
 use cgmath::{prelude::*, vec3, Matrix4, Vector3};
+use std::{fmt::Debug, path::Path};
 
 #[derive(Debug)]
 pub struct Model<V: VertexData> {
@@ -17,15 +14,19 @@ pub struct Model<V: VertexData> {
 }
 
 impl<V: VertexData + Send> Model<V> {
-    pub fn load<P>(path: P) -> Result<Self, String>
+    pub fn load<P>(path: P) -> Result<Self, loaders::LoaderError>
     where
         P: AsRef<Path> + Debug,
     {
         let mut model = match path.as_ref().extension() {
-            Some(ext) if ext == "obj" => super::loaders::load_obj(path)?,
-            Some(ext) if ext == "gltf" => super::loaders::load_gltf(path)?,
-            Some(ext) if ext == "glb" => super::loaders::load_gltf(path)?,
-            _ => return Err(String::from("Unsuported file format")),
+            Some(ext) if ext == "obj" => loaders::load_obj(path)?,
+            Some(ext) if ext == "gltf" => loaders::load_gltf(path)?,
+            Some(ext) if ext == "glb" => loaders::load_gltf(path)?,
+            _ => {
+                return Err(loaders::LoaderError::FileError(
+                    "unsuported file format".to_owned(),
+                ))
+            }
         };
 
         model.calculate_bounding_sphere();

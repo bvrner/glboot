@@ -1,6 +1,7 @@
 use super::{Material, Mesh, Model};
 use crate::ogl::texture::Texture;
 use cgmath::{prelude::*, Matrix4, Vector2, Vector3};
+use thiserror::Error;
 
 use super::{RawVertex, VertexData};
 use rayon::prelude::*;
@@ -8,18 +9,23 @@ use rayon::prelude::*;
 use std::{
     // error::Error,
     fmt::Debug,
+    io,
     path::Path,
 };
 
 // TODO General error type for all handlers
-#[derive(Debug, Clone)]
+#[derive(Debug, Error)]
 pub enum LoaderError {
-    IOError,
-    FileError,
+    #[error("model loader io error: {0}")]
+    IOError(#[from] io::Error),
+    #[error("error in model file: {0}")]
+    FileError(String),
+    #[error("gltf loader error: {0}")]
+    GltfError(#[from] gltf::Error),
 }
 
 // TODO rewrite this importer supporting the new vertex and material designs
-pub fn load_obj<P, V>(_path: P) -> Result<Model<V>, String>
+pub fn load_obj<P, V>(_path: P) -> Result<Model<V>, LoaderError>
 where
     P: AsRef<Path> + Debug,
     V: VertexData + Send,
@@ -110,17 +116,17 @@ where
     todo!()
 }
 
-pub fn load_gltf<P, V>(path: P) -> Result<Model<V>, String>
+pub fn load_gltf<P, V>(path: P) -> Result<Model<V>, LoaderError>
 where
     P: AsRef<Path>,
     V: VertexData,
 {
-    let (document, buffers, images) = gltf::import(path).unwrap();
+    let (document, buffers, images) = gltf::import(path)?;
 
     assert_eq!(buffers.len(), document.buffers().count());
     assert_eq!(images.len(), document.images().count());
 
-    let textures: Vec<Texture> = images
+    let textures: Result<Vec<Texture>, LoaderError> = images
         .into_iter()
         .map(|data| {
             use gltf::image::Format;
@@ -132,14 +138,24 @@ where
                 Format::R8G8B8A8 => gl::RGBA,
                 Format::B8G8R8 => gl::BGR,
                 Format::B8G8R8A8 => gl::BGRA,
-                _ => unimplemented!(),
+                _ => {
+                    return Err(LoaderError::FileError(
+                        "Unsuported texture format".to_owned(),
+                    ))
+                }
             };
 
             unsafe {
-                Texture::from_bytes(&data.pixels, data.width as i32, data.height as i32, format)
+                Ok(Texture::from_bytes(
+                    &data.pixels,
+                    data.width as i32,
+                    data.height as i32,
+                    format,
+                ))
             }
         })
         .collect();
+    let textures = textures?;
 
     let materials: Vec<Material> = document
         .materials()
@@ -216,8 +232,6 @@ fn process_node<V: VertexData>(
     buffers: &[gltf::buffer::Data],
     transform: Matrix4<f32>,
 ) -> Option<Vec<Mesh<V>>> {
-    // let node_transform: Matrix4<f32> = node.transform().matrix().into();
-    // let node_transform = transform * node_transform;
     let (t, r, s) = node.transform().decomposed();
 
     let t = Matrix4::from_translation(t.into());
@@ -226,10 +240,6 @@ fn process_node<V: VertexData>(
 
     let node_transform = t * r * s;
     let node_transform = transform * node_transform;
-    // let t = Matrix4::from_translation(Vector3::new(0.0, 0.0, -15.0));
-    // let r = Matrix4::from_angle_y(cgmath::Deg(15.0));
-    // let s = Matrix4::from_scale(0.01);
-    // let node_transform = t * r * s * node_transform;
 
     node.mesh().map(|mesh| {
         mesh.primitives()

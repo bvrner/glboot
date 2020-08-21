@@ -1,39 +1,24 @@
 use gl::types::*;
 use std::{
-    error::Error,
     ffi::{self, CString},
-    fmt,
     fs::File,
     io::{self, Read},
     ops::Drop,
     path::Path,
     ptr,
 };
+use thiserror::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Error)]
 pub enum ShaderError {
+    #[error("shader compiler error: {0}")]
     CompilationError(String),
+    #[error("shader source code error: {0}")]
     SourceError(String),
-    IoError(String),
+    #[error("shader io error")]
+    IoError(#[from] io::Error),
+    #[error("shader error: {0}")]
     Other(String),
-}
-
-impl Error for ShaderError {}
-impl fmt::Display for ShaderError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ShaderError::CompilationError(s) => write!(f, "Shader compilation error: {}", s),
-            ShaderError::SourceError(s) => write!(f, "Shader source error: {}", s),
-            ShaderError::IoError(s) => write!(f, "Shader IO error: {}", s),
-            ShaderError::Other(s) => write!(f, "Shader error: {}", s),
-        }
-    }
-}
-impl From<io::Error> for ShaderError {
-    #[inline]
-    fn from(err: io::Error) -> ShaderError {
-        ShaderError::IoError(err.to_string())
-    }
 }
 
 impl From<ffi::NulError> for ShaderError {

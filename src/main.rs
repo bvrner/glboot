@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
     let intermediate = FramebufferBuilder::new(1366, 713).build().unwrap();
 
-    let model: Model<StandardVertex> = Model::load(m_path).unwrap();
+    let model: Model<StandardVertex> = Model::load(m_path)?;
 
     let mut gui_state = glboot::ImGuiState::default();
     let mut camera = Camera::new(Point3::new(0.0, 0.0, 15.0), Vector3::new(0.0, 0.0, -1.0));

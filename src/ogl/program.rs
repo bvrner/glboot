@@ -164,6 +164,7 @@ fn check_program_status(program: GLuint, which: GLenum) -> Result<(), ShaderErro
 }
 
 // this works but it's kinda slow, TODO optmize and properly deal with errors
+// considering using the glsl crate to properly parse the source
 fn process_all(src: String) -> Result<(Shader, Shader, Option<Shader>), ShaderError> {
     const V_BEGIN_MARK: &str = "#begin vertex";
     const F_BEGIN_MARK: &str = "#begin fragment";

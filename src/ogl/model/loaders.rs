@@ -1,6 +1,6 @@
 use super::{Material, Mesh, Model};
 use crate::ogl::texture::Texture;
-use cgmath::{Matrix4, Vector2, Vector3};
+use cgmath::{prelude::*, Matrix4, Vector2, Vector3};
 
 use super::{RawVertex, VertexData};
 use rayon::prelude::*;
@@ -207,6 +207,7 @@ where
         textures,
         materials,
         sphere: (Vector3::new(0.0, 0.0, 0.0), 0.0),
+        global: Matrix4::identity(),
     })
 }
 
@@ -215,8 +216,20 @@ fn process_node<V: VertexData>(
     buffers: &[gltf::buffer::Data],
     transform: Matrix4<f32>,
 ) -> Option<Vec<Mesh<V>>> {
-    let node_transform: Matrix4<f32> = node.transform().matrix().into();
+    // let node_transform: Matrix4<f32> = node.transform().matrix().into();
+    // let node_transform = transform * node_transform;
+    let (t, r, s) = node.transform().decomposed();
+
+    let t = Matrix4::from_translation(t.into());
+    let r = Matrix4::from(cgmath::Quaternion::new(r[3], r[0], r[1], r[2]));
+    let s = Matrix4::from_nonuniform_scale(s[0], s[1], s[2]);
+
+    let node_transform = t * r * s;
     let node_transform = transform * node_transform;
+    // let t = Matrix4::from_translation(Vector3::new(0.0, 0.0, -15.0));
+    // let r = Matrix4::from_angle_y(cgmath::Deg(15.0));
+    // let s = Matrix4::from_scale(0.01);
+    // let node_transform = t * r * s * node_transform;
 
     node.mesh().map(|mesh| {
         mesh.primitives()

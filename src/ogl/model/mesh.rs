@@ -8,14 +8,14 @@ use crate::ogl::{
 use super::{Material, VertexData};
 use gl::types::*;
 
-use cgmath::Vector3;
+use cgmath::{Matrix4, Vector3};
 
 #[derive(Debug)]
 pub struct Mesh<V: VertexData> {
     pub vertices: Vec<V>,
     pub indices: Vec<u32>,
     pub material: Option<usize>,
-    pub default_transform: cgmath::Matrix4<f32>,
+    pub default_transform: Matrix4<f32>,
     pub bounds: (Vector3<f32>, Vector3<f32>),
     mode: GLenum,
     vbo: VertexBuffer,
@@ -28,10 +28,14 @@ impl<V: VertexData> Mesh<V> {
         vertices: Vec<V>,
         indices: Vec<u32>,
         material: Option<usize>,
-        default_transform: cgmath::Matrix4<f32>,
+        default_transform: Matrix4<f32>,
         bounds: (Vector3<f32>, Vector3<f32>),
         mode: GLenum,
     ) -> Self {
+        let bounds = (
+            (default_transform * bounds.0.extend(1.0)).truncate(),
+            (default_transform * bounds.1.extend(1.0)).truncate(),
+        );
         Mesh {
             vertices,
             indices,
@@ -54,8 +58,8 @@ impl<V: VertexData> Mesh<V> {
         self.vao.add_buffer(&self.vbo, &layout);
     }
 
-    pub fn draw(&self, shader: &mut ShaderProgram, materials: &[Material]) {
-        shader.set_uniform("default_model", self.default_transform);
+    pub fn draw(&self, shader: &mut ShaderProgram, materials: &[Material], global: Matrix4<f32>) {
+        shader.set_uniform("model", global * self.default_transform);
 
         if let Some(mat_index) = self.material {
             let material = &materials[mat_index];

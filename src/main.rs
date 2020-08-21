@@ -18,19 +18,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let shader_path = format!("{}/shaders/flattex.glsl", root);
-    // let shader_path = format!("{}/shaders/basic_ads.glsl", root);
+    // let shader_path = format!("{}/shaders/procedural/bricks.glsl", root);
     let post_path = format!("{}/shaders/flat_post.glsl", root);
     // let m_path = format!("{}/models/matilda/scene.gltf", root);
     let m_path = format!("{}/models/back/scene.gltf", root);
+    // let m_path = format!("{}/models/tests/BoxTextured.gltf", root);
     // let m_path = format!("{}/models/dragon.glb", root);
 
     let mut window = setup();
 
-    let program = ShaderProgram::from_file(shader_path)?;
-    let post_program = ShaderProgram::from_file(post_path)?;
-
-    let program = Rc::new(RefCell::new(program));
-    let post_program = Rc::new(RefCell::new(post_program));
+    let program = Rc::new(RefCell::new(ShaderProgram::from_file(shader_path)?));
+    let post_program = Rc::new(RefCell::new(ShaderProgram::from_file(post_path)?));
 
     post_program.borrow_mut().set_uniform("screenTex", 0);
 

@@ -13,6 +13,7 @@ pub struct Model<V: VertexData> {
     pub textures: Vec<Texture>,
     pub materials: Vec<Material>,
     pub sphere: (Vector3<f32>, f32),
+    pub global: Matrix4<f32>,
 }
 
 impl<V: VertexData + Send> Model<V> {
@@ -34,23 +35,12 @@ impl<V: VertexData + Send> Model<V> {
     pub fn draw(&self, shader: &mut ShaderProgram) {
         shader.bind();
 
-        // let mut p = -self.sphere.0;
-        // p.z = -50.0;
-        let scale =
-            self.sphere.0.distance(Vector3::new(0.0, 0.0, 15.0)) * (45f32.to_radians() / 2.0).sin();
-        shader.set_uniform(
-            "global",
-            // Matrix4::from_translation(-self.sphere.0) * // aaa
-            Matrix4::from_scale(scale / self.sphere.1),
-        );
-
-        // shader.set_uniform("global", Matrix4::from_scale(0.1));
         for (i, tex) in self.textures.iter().enumerate() {
             tex.bind(i as u32);
         }
 
         for mesh in self.meshs.iter() {
-            mesh.draw(shader, &self.materials);
+            mesh.draw(shader, &self.materials, self.global);
         }
         shader.unbind();
     }
@@ -86,6 +76,9 @@ impl<V: VertexData + Send> Model<V> {
         }
 
         self.sphere = (sphere_center, radius);
+        let scale =
+            self.sphere.0.distance(Vector3::new(0.0, 0.0, 15.0)) * (45f32.to_radians() / 2.0).sin();
+        self.global = Matrix4::from_scale(scale / self.sphere.1);
         // dbg!(self.sphere);
     }
 
@@ -103,8 +96,8 @@ impl<V: VertexData + Send> Model<V> {
             .fold(bounds, |(bound_min, bound_max), mesh| {
                 let (mesh_min, mesh_max) = mesh.bounds;
 
-                let mesh_min = mesh.default_transform * mesh_min.extend(1.0);
-                let mesh_max = mesh.default_transform * mesh_max.extend(1.0);
+                // let mesh_min = mesh.default_transform * mesh_min.extend(1.0);
+                // let mesh_max = mesh.default_transform * mesh_max.extend(1.0);
 
                 let minx = bound_min.x.min(mesh_min.x);
                 let miny = bound_min.y.min(mesh_min.y);

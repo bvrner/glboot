@@ -1,4 +1,4 @@
-use cgmath::{InnerSpace, Point2, Quaternion, Rotation3, Vector3};
+use cgmath::{InnerSpace, Point2, Quaternion, Vector3};
 
 #[derive(Debug, Copy, Clone)]
 pub struct ArcBall {

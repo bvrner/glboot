@@ -2,7 +2,7 @@ pub mod loaders;
 mod material;
 mod mesh;
 mod model;
-mod vertex_data;
+pub mod vertex_data;
 
 pub use material::Material;
 pub use mesh::Mesh;

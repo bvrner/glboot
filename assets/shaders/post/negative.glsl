@@ -20,9 +20,7 @@ in vec2 TexCoords;
 
 out vec4 Color;
 
-uniform int option = 0;
 uniform sampler2D screenTex;
-
 
 void main() {
     Color = vec4(vec3(1.0 - texture(screenTex, TexCoords)), 1.0);

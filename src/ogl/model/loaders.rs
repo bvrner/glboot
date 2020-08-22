@@ -223,7 +223,10 @@ where
         textures,
         materials,
         sphere: (Vector3::new(0.0, 0.0, 0.0), 0.0),
-        global: Matrix4::identity(),
+        // global: Matrix4::identity(),
+        rotation: Matrix4::identity(),
+        scale: Matrix4::identity(),
+        translation: Matrix4::identity(),
     })
 }
 

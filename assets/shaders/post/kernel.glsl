@@ -1,4 +1,5 @@
 #begin vertex
+
 #version 330 core
 
 layout (location = 0) in vec2 aPos;
@@ -36,13 +37,13 @@ const mat3 kernels[] = mat3[](
         1.0 / 16, 2.0 / 16, 1.0 / 16,
         2.0 / 16, 4.0 / 16, 2.0 / 16,
         1.0 / 16, 2.0 / 16, 1.0 / 16
-         )
+         ),
     // edge
     mat3(
         1.0, 1.0,1.0,
         1.0, -8.0, 1.0,
         1.0,1.0,1.0
-         ),
+         )
 
 );
 

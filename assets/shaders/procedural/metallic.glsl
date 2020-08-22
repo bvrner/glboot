@@ -1,3 +1,5 @@
+// this is a WIP
+
 #begin vertex
 #version 330 core
 
@@ -12,21 +14,12 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 uniform mat4 arc;
-uniform mat4 default_model;
-uniform mat4 global;
 
 void main() {
-     // mat4 thismodel = arc * global * default_model;
-     mat4 thismodel = global * default_model;
-     // mat4 thismodel = default_model * arc * global;
-     // mat4 thismodel = arc * default_model * global;
-     // mat4 thismodel = arc * global;
-     // mat4 thismodel = arc * default_model;
-     // mat4 thismodel = global * arc * default_model;
-     Norm = mat3(inverse(transpose(thismodel))) * aNorm;
-     iPos = this_model * vec4(aPos, 1.0);
+     Norm = mat3(inverse(transpose(model))) * aNorm;
+     iPos = model * vec4(aPos, 1.0);
      Pos = vec3(iPos);
-     world = thismodel;
+     world = model;
      gl_Position = projection * view * iPos;
 }
 #end vertex

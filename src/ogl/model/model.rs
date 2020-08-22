@@ -10,7 +10,13 @@ pub struct Model<V: VertexData> {
     pub textures: Vec<Texture>,
     pub materials: Vec<Material>,
     pub sphere: (Vector3<f32>, f32),
-    pub global: Matrix4<f32>,
+
+    // decomposed transforms
+    pub rotation: Matrix4<f32>,
+    pub scale: Matrix4<f32>,
+    pub translation: Matrix4<f32>,
+    // all transforms together
+    // pub global: Matrix4<f32>,
 }
 
 impl<V: VertexData + Send> Model<V> {
@@ -35,13 +41,14 @@ impl<V: VertexData + Send> Model<V> {
 
     pub fn draw(&self, shader: &mut ShaderProgram) {
         shader.bind();
+        let global = self.translation * self.rotation * self.scale;
 
         for (i, tex) in self.textures.iter().enumerate() {
             tex.bind(i as u32);
         }
 
         for mesh in self.meshs.iter() {
-            mesh.draw(shader, &self.materials, self.global);
+            mesh.draw(shader, &self.materials, global);
         }
         shader.unbind();
     }
@@ -79,7 +86,7 @@ impl<V: VertexData + Send> Model<V> {
         self.sphere = (sphere_center, radius);
         let scale =
             self.sphere.0.distance(Vector3::new(0.0, 0.0, 15.0)) * (45f32.to_radians() / 2.0).sin();
-        self.global = Matrix4::from_scale(scale / self.sphere.1);
+        self.scale = Matrix4::from_scale(scale / self.sphere.1);
         // dbg!(self.sphere);
     }
 

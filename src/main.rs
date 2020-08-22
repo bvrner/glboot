@@ -19,8 +19,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let shader_path = format!("{}/shaders/flattex.glsl", root);
     // let shader_path = format!("{}/shaders/procedural/bricks.glsl", root);
-    // let post_path = format!("{}/shaders/post/flat_post.glsl", root);
-    // let post_path = format!("{}/shaders/post/bw.glsl", root);
     // let m_path = format!("{}/models/matilda/scene.gltf", root);
     let m_path = format!("{}/models/back/scene.gltf", root);
     // let m_path = format!("{}/models/tests/BoxTextured.gltf", root);
@@ -45,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
     let intermediate = FramebufferBuilder::new(1366, 713).build().unwrap();
 
-    let model: Model<StandardVertex> = Model::load(m_path)?;
+    let mut model: Model<StandardVertex> = Model::load(m_path)?;
 
     let mut gui_state = glboot::ImGuiState::default();
     let mut camera = Camera::new(Point3::new(0.0, 0.0, 15.0), Vector3::new(0.0, 0.0, -1.0));
@@ -68,8 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cgmath::perspective(cgmath::Deg(45.0_f32), 1366.0 / 713.0, 0.1_f32, 100f32),
         );
         program.set_uniform("view", camera.get_matrix());
-        program.set_uniform("model", Matrix4::from_scale(0.1));
-        program.set_uniform("arc", Matrix4::identity());
+        // program.set_uniform("model", Matrix4::from_scale(0.1));
     }
 
     let mut arc = ArcBall::new(1366.0, 713.0);
@@ -132,7 +129,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             quad_vao.unbind();
         }
 
-        imgui.draw(&mut window, &mut gui_state);
+        // the passing of the model is a ad hoc that will be removed when
+        // I implement scene and renderer traits and/or structs
+        imgui.draw(&mut window, &mut gui_state, &mut model);
 
         window.update();
 
@@ -148,7 +147,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 glfw::WindowEvent::Key(Key::R, _, Action::Press, _) => {
                     arc.reset();
-                    program.set_uniform("arc", Matrix4::identity());
+                    model.rotation = Matrix4::identity();
                 }
                 glfw::WindowEvent::MouseButton(glfw::MouseButtonRight, Action::Press, _) => {
                     let point = window.get_cursor_pos();
@@ -160,7 +159,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 glfw::WindowEvent::CursorPos(x, y) => {
                     if arc.is_on {
                         let rotation = Matrix4::from(arc.drag(Point2::new(x as f32, y as f32)));
-                        program.set_uniform("arc", rotation);
+                        model.rotation = rotation;
                     }
                 }
                 glfw::WindowEvent::FramebufferSize(w, h) => {
@@ -204,6 +203,7 @@ fn setup() -> Window {
     window
 }
 
+// TODO update Camera struct to handle this
 fn handle_cam(
     camera: &mut Camera,
     event: &glfw::WindowEvent,

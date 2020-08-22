@@ -12,8 +12,7 @@ use std::{cell::RefCell, rc::Rc};
 pub struct ImGUI {
     pub imgui: RefCell<imgui::Context>,
     pub imgui_glfw: ImguiGLFW,
-    main_shader: Rc<RefCell<ShaderProgram>>,
-    // post_shader: Rc<RefCell<ShaderProgram>>,
+    main_shader: Rc<RefCell<ShaderProgram>>, // TODO remove this
 }
 
 // This is a pretty wack way to deal with options
@@ -65,7 +64,12 @@ impl ImGUI {
             .handle_event(&mut self.imgui.borrow_mut(), event);
     }
 
-    pub fn draw(&mut self, window: &mut glfw::Window, state: &mut ImGuiState) {
+    pub fn draw<V: ogl::model::vertex_data::VertexData>(
+        &mut self,
+        window: &mut glfw::Window,
+        state: &mut ImGuiState,
+        model: &mut crate::ogl::model::Model<V>,
+    ) {
         let mut imgui = self.imgui.borrow_mut();
         let ui = self.imgui_glfw.frame(window, &mut imgui);
 
@@ -76,9 +80,11 @@ impl ImGUI {
                     if imgui::Slider::new(imgui::im_str!("Scale"), 0.000000001..=1.0)
                         .build(&ui, &mut state.scale)
                     {
-                        self.main_shader
-                            .borrow_mut()
-                            .set_uniform("model", cgmath::Matrix4::from_scale(state.scale));
+                        model.scale = cgmath::Matrix4::from_scale(state.scale);
+                        // TODO bugged: this transform should be given to the model, not directly to the shader
+                        // self.main_shader
+                        //     .borrow_mut()
+                        //     .set_uniform("model", cgmath::Matrix4::from_scale(state.scale));
                     }
 
                     ui.checkbox(imgui::im_str!("Wireframe"), &mut state.wireframe);

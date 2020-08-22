@@ -13,7 +13,7 @@ pub struct ImGUI {
     pub imgui: RefCell<imgui::Context>,
     pub imgui_glfw: ImguiGLFW,
     main_shader: Rc<RefCell<ShaderProgram>>,
-    post_shader: Rc<RefCell<ShaderProgram>>,
+    // post_shader: Rc<RefCell<ShaderProgram>>,
 }
 
 // This is a pretty wack way to deal with options
@@ -25,7 +25,7 @@ pub struct ImGuiState {
     pub env: bool,
     pub cam_slider: f32,
     pub scale: f32,
-    pub post_option: i32,
+    pub post_option: usize,
 }
 
 impl Default for ImGuiState {
@@ -45,7 +45,7 @@ impl ImGUI {
     pub fn new(
         window: &mut glfw::Window,
         main_shader: Rc<RefCell<ShaderProgram>>,
-        post_shader: Rc<RefCell<ShaderProgram>>,
+        // post_shader: Rc<RefCell<ShaderProgram>>,
     ) -> Self {
         let mut imgui = Context::create();
         imgui.set_ini_filename(None);
@@ -55,7 +55,7 @@ impl ImGUI {
             imgui: RefCell::new(imgui),
             imgui_glfw,
             main_shader,
-            post_shader,
+            // post_shader,
         }
     }
 
@@ -116,7 +116,7 @@ impl ImGUI {
                 }
 
                 if imgui::CollapsingHeader::new(im_str!("Post-Processing")).build(&ui) {
-                    const NAMES: [&'static str; 8] = [
+                    const NAMES: [&'static str; 7] = [
                         "None",
                         "Negative",
                         "Black and White",
@@ -124,18 +124,16 @@ impl ImGUI {
                         "Blur",
                         "Edge",
                         "Sobel",
-                        "Negative Sobel",
                     ];
 
                     for (i, name) in NAMES.iter().enumerate() {
                         if imgui::Selectable::new(&ImString::new(name.to_owned()))
-                            .selected(state.post_option == i as i32)
+                            .selected(state.post_option == i)
                             .build(&ui)
                         {
-                            state.post_option = i as i32;
-                            self.post_shader
-                                .borrow_mut()
-                                .set_uniform("option", state.post_option);
+                            state.post_option = i;
+
+                            println!("{}", i);
                         }
                     }
                 }

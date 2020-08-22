@@ -8,7 +8,7 @@ use glboot::ogl::{
     model::Model,
     model::StandardVertex,
     program::ShaderProgram,
-    // texture::Texture,
+    shaders::ShaderError, // texture::Texture,
 };
 
 use cgmath::{Matrix4, Point2, Point3, SquareMatrix, Vector3};
@@ -19,7 +19,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let shader_path = format!("{}/shaders/flattex.glsl", root);
     // let shader_path = format!("{}/shaders/procedural/bricks.glsl", root);
-    let post_path = format!("{}/shaders/flat_post.glsl", root);
+    // let post_path = format!("{}/shaders/post/flat_post.glsl", root);
+    // let post_path = format!("{}/shaders/post/bw.glsl", root);
     // let m_path = format!("{}/models/matilda/scene.gltf", root);
     let m_path = format!("{}/models/back/scene.gltf", root);
     // let m_path = format!("{}/models/tests/BoxTextured.gltf", root);
@@ -28,11 +29,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut window = setup();
 
     let program = Rc::new(RefCell::new(ShaderProgram::from_file(shader_path)?));
-    let post_program = Rc::new(RefCell::new(ShaderProgram::from_file(post_path)?));
+    let mut post_programs = load_post_shaders()?;
+    // let post_program = Rc::new(RefCell::new(ShaderProgram::from_file(post_path)?));
 
-    post_program.borrow_mut().set_uniform("screenTex", 0);
+    for program in post_programs.iter_mut() {
+        program.set_uniform("screenTex", 0);
+    }
 
-    let mut imgui = glboot::ImGUI::new(&mut window, program.clone(), post_program.clone());
+    let mut imgui = glboot::ImGUI::new(&mut window, program.clone());
     let framebuffer = FramebufferBuilder::new(1366, 713)
         .with_depth()
         .with_stencil()
@@ -100,7 +104,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // second pass, render that texture to the screen
         {
-            let post_program = post_program.borrow();
+            // properly select the shader, since the effects done by kernels
+            // share the same shader in the list
+            // also if we are using the kernel shader we need to set which kernel to use
+            let post_opt = gui_state.post_option;
+            let post_program = if post_opt > 2 && post_opt < 6 {
+                let program = &mut post_programs[3];
+                program.set_uniform("option", (post_opt - 3) as i32);
+                program
+            } else {
+                &mut post_programs[if post_opt < 2 { post_opt } else { 4 }]
+            };
+
             post_program.bind();
             post_program.send_uniforms();
             intermediate.bind_textures(0);
@@ -215,4 +230,16 @@ fn handle_cam(
         }
         _ => {}
     }
+}
+
+fn load_post_shaders() -> Result<Vec<ShaderProgram>, ShaderError> {
+    let root = format!("{}/assets/shaders/post", env!("CARGO_MANIFEST_DIR"));
+
+    Ok(vec![
+        ShaderProgram::from_file(format!("{}/flat_post.glsl", root))?,
+        ShaderProgram::from_file(format!("{}/negative.glsl", root))?,
+        ShaderProgram::from_file(format!("{}/bw.glsl", root))?,
+        ShaderProgram::from_file(format!("{}/kernel.glsl", root))?,
+        ShaderProgram::from_file(format!("{}/sobel.glsl", root))?,
+    ])
 }

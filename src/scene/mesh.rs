@@ -77,6 +77,8 @@ impl Primitive {
         self.vao.bind();
         self.ibo.bind();
         shader.send_uniforms();
+
+        // TODO instancing and check if there are indices
         unsafe {
             gl::DrawElements(
                 gl::TRIANGLES,

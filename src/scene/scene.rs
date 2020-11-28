@@ -10,7 +10,8 @@ use std::path::Path;
 
 #[derive(Debug)]
 pub struct Scene {
-    roots: Vec<Node>,
+    nodes: Vec<Node>,  // all nodes
+    roots: Vec<usize>, // indices of the roots
     textures: Vec<Texture>,
     materials: Vec<Material>,
     pub transform: Matrix4<f32>,
@@ -28,8 +29,9 @@ impl Scene {
             tex.bind(i as u32);
         }
 
-        for node in self.roots.iter() {
-            node.draw(shader, &self.materials, self.transform);
+        // start rendering by the roots which will render it's children and so on and so forth
+        for &node in self.roots.iter() {
+            self.nodes[node].draw(shader, &self.materials, &self.nodes, self.transform);
         }
         shader.unbind();
     }
@@ -65,15 +67,21 @@ where
         .map(Material::from)
         .collect();
 
+    let nodes = document
+        .nodes()
+        .map(|node| process_node(&buffers, &node))
+        .collect();
+
     let mut roots = Vec::new();
     for scene in document.scenes() {
         for node in scene.nodes() {
-            roots.push(process_node(&buffers, &node));
+            roots.push(node.index());
         }
     }
 
     Ok(Scene {
         roots,
+        nodes,
         textures,
         materials,
         transform: Matrix4::identity(),
@@ -83,10 +91,7 @@ where
 fn process_node(buffers: &[gltf::buffer::Data], node: &gltf::Node) -> Node {
     let mesh = node.mesh().map(|m| process_mesh(&buffers, &m));
     let transform = node.transform().matrix().into();
-    let children = node
-        .children()
-        .map(|child| process_node(&buffers, &child))
-        .collect();
+    let children = node.children().map(|child| child.index()).collect();
 
     Node::new(mesh, transform, children)
 }

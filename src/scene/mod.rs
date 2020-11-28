@@ -4,4 +4,4 @@ mod scene;
 
 pub use mesh::*;
 pub use node::Node;
-pub use scene::Scene;
+pub use scene::{LoaderError, Scene};

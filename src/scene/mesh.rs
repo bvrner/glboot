@@ -94,7 +94,7 @@ impl Primitive {
         let indices_count = indices.len() as i32;
         let vbo = VertexBuffer::new(&vertices);
         let ibo = IndexBuffer::new(&indices);
-        let mut vao = VertexArray::new();
+        let vao = VertexArray::new();
 
         let layout = layout![
             (3, f32, gl::FLOAT),

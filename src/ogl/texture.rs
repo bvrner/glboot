@@ -1,6 +1,7 @@
 use gl::types::*;
 
 use image::{DynamicImage, GenericImageView};
+use std::convert::TryFrom;
 use std::{convert::TryInto, ffi::c_void, path::Path};
 
 // (texture id, texture kind)
@@ -153,6 +154,38 @@ impl Texture {
     pub fn unbind(&self) {
         unsafe {
             gl::BindTexture(gl::TEXTURE_2D, 0);
+        }
+    }
+}
+
+impl TryFrom<gltf::image::Data> for Texture {
+    type Error = crate::scene::LoaderError;
+
+    fn try_from(data: gltf::image::Data) -> Result<Self, Self::Error> {
+        use crate::scene::LoaderError;
+        use gltf::image::Format;
+
+        let format = match data.format {
+            Format::R8 => gl::RED,
+            Format::R8G8 => gl::RG,
+            Format::R8G8B8 => gl::RGB,
+            Format::R8G8B8A8 => gl::RGBA,
+            Format::B8G8R8 => gl::BGR,
+            Format::B8G8R8A8 => gl::BGRA,
+            _ => {
+                return Err(LoaderError::FileError(
+                    "Unsuported texture format".to_owned(),
+                ))
+            }
+        };
+
+        unsafe {
+            Ok(Self::from_bytes(
+                &data.pixels,
+                data.width as i32,
+                data.height as i32,
+                format,
+            ))
         }
     }
 }

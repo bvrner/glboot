@@ -5,6 +5,7 @@ use thiserror::Error;
 use super::{Mesh, Node, Primitive, Vertice};
 
 use rayon::prelude::*;
+use std::convert::TryFrom;
 use std::path::Path;
 
 #[derive(Debug)]
@@ -12,7 +13,7 @@ pub struct Scene {
     roots: Vec<Node>,
     textures: Vec<Texture>,
     materials: Vec<Material>,
-    // transform: Matrix4<f32>
+    pub transform: Matrix4<f32>,
 }
 
 impl Scene {
@@ -28,7 +29,7 @@ impl Scene {
         }
 
         for node in self.roots.iter() {
-            node.draw(shader, &self.materials, Matrix4::from_scale(0.005));
+            node.draw(shader, &self.materials, self.transform);
         }
         shader.unbind();
     }
@@ -53,71 +54,15 @@ where
     assert_eq!(buffers.len(), document.buffers().count());
     assert_eq!(images.len(), document.images().count());
 
-    let textures: Result<Vec<Texture>, LoaderError> = images
-        .into_iter()
-        .map(|data| {
-            use gltf::image::Format;
-
-            let format = match data.format {
-                Format::R8 => gl::RED,
-                Format::R8G8 => gl::RG,
-                Format::R8G8B8 => gl::RGB,
-                Format::R8G8B8A8 => gl::RGBA,
-                Format::B8G8R8 => gl::BGR,
-                Format::B8G8R8A8 => gl::BGRA,
-                _ => {
-                    return Err(LoaderError::FileError(
-                        "Unsuported texture format".to_owned(),
-                    ))
-                }
-            };
-
-            unsafe {
-                Ok(Texture::from_bytes(
-                    &data.pixels,
-                    data.width as i32,
-                    data.height as i32,
-                    format,
-                ))
-            }
-        })
-        .collect();
+    let textures: Result<Vec<Texture>, LoaderError> =
+        images.into_iter().map(Texture::try_from).collect();
     let textures = textures?;
 
     let materials: Vec<Material> = document
         .materials()
         .into_iter()
         .par_bridge()
-        .map(|mat| {
-            let metallic_roughness = mat.pbr_metallic_roughness();
-            let base_color = metallic_roughness.base_color_factor().into();
-            let base_tex = metallic_roughness
-                .base_color_texture()
-                .map(|info| info.texture().index());
-
-            let metallic = metallic_roughness.metallic_factor();
-            let roughness = metallic_roughness.roughness_factor();
-            let metallic_tex = metallic_roughness
-                .metallic_roughness_texture()
-                .map(|info| info.texture().index());
-
-            let normal = mat.normal_texture().map(|norm| norm.texture().index());
-            let (occlusion_tex, occlusion_str) = mat
-                .occlusion_texture()
-                .map(|occ| (Some(occ.texture().index()), occ.strength()))
-                .unwrap_or((None, 0.0));
-
-            Material {
-                base_color,
-                base_tex,
-                metallic,
-                roughness,
-                metallic_tex,
-                normal,
-                occlusion_tex,
-                occlusion_str,
-            }
-        })
+        .map(Material::from)
         .collect();
 
     let mut roots = Vec::new();
@@ -131,6 +76,7 @@ where
         roots,
         textures,
         materials,
+        transform: Matrix4::identity(),
     })
 }
 

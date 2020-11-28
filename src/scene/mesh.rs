@@ -113,3 +113,13 @@ impl Primitive {
         }
     }
 }
+
+impl Default for Vertice {
+    fn default() -> Self {
+        Self {
+            pos: Vector3::new(0.0, 0.0, 0.0),
+            normal: Vector3::new(0.0, 0.0, 0.0),
+            tex: Vector2::new(0.0, 0.0),
+        }
+    }
+}

@@ -1,5 +1,5 @@
 use crate::ogl::{material::Material, program::ShaderProgram, texture::Texture};
-use cgmath::{prelude::*, Matrix4, Vector2, Vector3};
+use cgmath::{prelude::*, Matrix4, Vector3};
 use thiserror::Error;
 
 use super::{Mesh, Node, Primitive, Vertice};
@@ -68,7 +68,7 @@ where
     let mut roots = Vec::new();
     for scene in document.scenes() {
         for node in scene.nodes() {
-            roots.push(proccess_node(&buffers, &node));
+            roots.push(process_node(&buffers, &node));
         }
     }
 
@@ -80,27 +80,22 @@ where
     })
 }
 
-fn proccess_node(buffers: &[gltf::buffer::Data], node: &gltf::Node) -> Node {
-    let mesh = node.mesh().map(|m| proccess_mesh(&buffers, &m));
+fn process_node(buffers: &[gltf::buffer::Data], node: &gltf::Node) -> Node {
+    let mesh = node.mesh().map(|m| process_mesh(&buffers, &m));
     let transform = node.transform().matrix().into();
     let children = node
         .children()
-        .map(|child| proccess_node(&buffers, &child))
+        .map(|child| process_node(&buffers, &child))
         .collect();
 
     Node::new(mesh, transform, children)
 }
 
-fn proccess_mesh(buffers: &[gltf::buffer::Data], m: &gltf::Mesh) -> Mesh {
+fn process_mesh(buffers: &[gltf::buffer::Data], m: &gltf::Mesh) -> Mesh {
     let primitives = m
         .primitives()
         .map(|primitive| {
-            let mut indices: Vec<u32> = Vec::new();
             let mut positions = Vec::new();
-            let mut normals = Vec::new();
-            let mut tex_coords = Vec::new();
-
-            let material = primitive.material().index();
 
             let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
 
@@ -108,39 +103,35 @@ fn proccess_mesh(buffers: &[gltf::buffer::Data], m: &gltf::Mesh) -> Mesh {
                 positions.extend(pos.map(|p| Vector3::from(p)));
             }
 
+            //TODO? dynamic vertice types according to the data present?
+            let mut vertices: Vec<Vertice> = positions
+                .into_iter()
+                .map(|p| Vertice {
+                    pos: Vector3::from(p),
+                    ..Vertice::default()
+                })
+                .collect();
+
             if let Some(norm) = reader.read_normals() {
-                normals.extend(norm.map(|n| Vector3::from(n)));
+                for (i, normal) in norm.enumerate() {
+                    vertices[i].normal = normal.into();
+                }
             }
 
             if let Some(tex) = reader.read_tex_coords(0) {
-                tex_coords.extend(tex.into_f32().map(|t| Vector2::from(t)));
+                for (i, coord) in tex.into_f32().enumerate() {
+                    vertices[i].tex = coord.into();
+                }
             }
 
-            if let Some(ind) = reader.read_indices() {
-                indices.extend(ind.into_u32());
-            }
-
-            let normal_iter = if normals.len() > 0 {
-                normals.into_iter().cycle()
+            let indices = if let Some(ind) = reader.read_indices() {
+                ind.into_u32().collect()
             } else {
-                vec![Vector3::new(0.0_f32, 0.0, 0.0)].into_iter().cycle()
+                vec![]
             };
-            let tex_iter = if tex_coords.len() > 0 {
-                tex_coords.into_iter().cycle()
-            } else {
-                vec![Vector2::new(0.0_f32, 0.0)].into_iter().cycle()
-            };
-
-            let vertices = positions
-                .into_iter()
-                .zip(normal_iter)
-                .zip(tex_iter)
-                .map(|((pos, normal), tex)| Vertice { pos, normal, tex })
-                .collect();
-
-            Primitive::setup(vertices, indices, material)
-
             // let bounds = primitive.bounding_box();
+
+            Primitive::setup(vertices, indices, primitive.material().index())
         })
         .collect();
 

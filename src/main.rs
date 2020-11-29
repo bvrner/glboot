@@ -2,13 +2,14 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use glboot::core::{arcball::ArcBall, camera::Camera, window::Window};
-use glboot::ogl::{
-    buffers::{FramebufferBuilder, VertexArray, VertexBuffer},
-    model::Model,
-    model::StandardVertex,
-    program::ShaderProgram,
-    shaders::ShaderError, // texture::Texture,
+use glboot::{
+    core::{arcball::ArcBall, camera::Camera, window::Window},
+    ogl::{
+        buffers::{FramebufferBuilder, VertexArray, VertexBuffer},
+        program::ShaderProgram,
+        shaders::ShaderError, // texture::Texture,
+    },
+    scene::Scene,
 };
 
 use cgmath::{Matrix4, Point2, Point3, SquareMatrix, Vector3};
@@ -43,8 +44,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
     let intermediate = FramebufferBuilder::new(1366, 713).build().unwrap();
 
-    let mut model: Model<StandardVertex> = Model::load(m_path)?;
-
+    // let mut model: Model<StandardVertex> = Model::load(m_path)?;
+    let mut scene = Scene::load(m_path)?;
     let mut gui_state = glboot::ImGuiState::default();
     let mut camera = Camera::new(Point3::new(0.0, 0.0, 15.0), Vector3::new(0.0, 0.0, -1.0));
 
@@ -94,7 +95,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
 
-        model.draw(&mut program.borrow_mut());
+        scene.render(&mut program.borrow_mut());
+        // model.draw(&mut program.borrow_mut());
         framebuffer.unbind();
         // copy data from fbo to another, needed for anti-aliasing
         framebuffer.blit(&intermediate);
@@ -131,7 +133,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // the passing of the model is a ad hoc that will be removed when
         // I implement scene and renderer traits and/or structs
-        imgui.draw(&mut window, &mut gui_state, &mut model);
+        imgui.draw(&mut window, &mut gui_state, &mut scene);
 
         window.update();
 
@@ -147,7 +149,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 glfw::WindowEvent::Key(Key::R, _, Action::Press, _) => {
                     arc.reset();
-                    model.rotation = Matrix4::identity();
+                    // model.rotation = Matrix4::identity();
                 }
                 glfw::WindowEvent::MouseButton(glfw::MouseButtonRight, Action::Press, _) => {
                     let point = window.get_cursor_pos();
@@ -159,7 +161,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 glfw::WindowEvent::CursorPos(x, y) => {
                     if arc.is_on {
                         let rotation = Matrix4::from(arc.drag(Point2::new(x as f32, y as f32)));
-                        model.rotation = rotation;
+                        // model.rotation = rotation;
                     }
                 }
                 glfw::WindowEvent::FramebufferSize(w, h) => {

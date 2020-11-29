@@ -2,6 +2,7 @@
 pub mod macros;
 pub mod core;
 pub mod ogl;
+pub mod scene;
 
 use crate::core::ui::ImguiGLFW;
 use imgui::{im_str, Context, ImString};
@@ -64,11 +65,11 @@ impl ImGUI {
             .handle_event(&mut self.imgui.borrow_mut(), event);
     }
 
-    pub fn draw<V: ogl::model::vertex_data::VertexData>(
+    pub fn draw(
         &mut self,
         window: &mut glfw::Window,
         state: &mut ImGuiState,
-        model: &mut crate::ogl::model::Model<V>,
+        scene: &mut crate::scene::Scene,
     ) {
         let mut imgui = self.imgui.borrow_mut();
         let ui = self.imgui_glfw.frame(window, &mut imgui);
@@ -80,7 +81,8 @@ impl ImGUI {
                     if imgui::Slider::new(imgui::im_str!("Scale"), 0.000000001..=1.0)
                         .build(&ui, &mut state.scale)
                     {
-                        model.scale = cgmath::Matrix4::from_scale(state.scale);
+                        scene.transform = cgmath::Matrix4::from_scale(state.scale)
+                        // model.scale = cgmath::Matrix4::from_scale(state.scale);
                         // TODO bugged: this transform should be given to the model, not directly to the shader
                         // self.main_shader
                         //     .borrow_mut()

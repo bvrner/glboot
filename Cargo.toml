@@ -16,7 +16,7 @@ cgmath = "0.17.0"
 image = "0.23.10"
 rayon = "1.4.0"
 gltf = "0.15"
-thiserror = "1.0.20"
+thiserror = "1.0.22"
 
 [dev-dependencies]
 criterion = "0.3"

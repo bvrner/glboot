@@ -1,3 +1,4 @@
+use crate::ImRender;
 use cgmath::{InnerSpace, Matrix4, Point3, Vector3};
 
 const WORLD_UP: Vector3<f32> = Vector3 {
@@ -13,6 +14,7 @@ pub struct Camera {
     pub front: Vector3<f32>,
     pub up: Vector3<f32>,
     pub right: Vector3<f32>,
+    pub fov: f32,
 }
 
 impl Camera {
@@ -32,6 +34,7 @@ impl Camera {
             front: norm_front,
             up,
             right,
+            fov: 45.0,
         }
     }
 
@@ -39,5 +42,19 @@ impl Camera {
     #[inline]
     pub fn get_matrix(&self) -> Matrix4<f32> {
         Matrix4::look_at(self.pos, self.pos + self.front, self.up)
+    }
+
+    // Just a small helper
+    #[inline]
+    pub fn get_projection(&self, w: f32, h: f32) -> Matrix4<f32> {
+        cgmath::perspective(cgmath::Deg(self.fov), w as f32 / h as f32, 0.1_f32, 100f32)
+    }
+}
+
+impl ImRender for Camera {
+    fn render(&mut self, ui: &imgui::Ui) {
+        if imgui::CollapsingHeader::new(imgui::im_str!("Camera")).build(&ui) {
+            if imgui::Slider::new(imgui::im_str!("FOV"), 0.1..=90.0).build(&ui, &mut self.fov) {}
+        }
     }
 }

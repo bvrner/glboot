@@ -1,5 +1,8 @@
-use crate::ogl::{material::Material, program::ShaderProgram, texture::Texture};
-use cgmath::{prelude::*, Matrix4, Vector3};
+use crate::{
+    ogl::{material::Material, program::ShaderProgram, texture::Texture},
+    ImRender,
+};
+use cgmath::{prelude::*, Matrix4, Quaternion, Vector3};
 use thiserror::Error;
 
 use super::{Mesh, Node, Primitive, Vertice};
@@ -14,7 +17,21 @@ pub struct Scene {
     roots: Vec<usize>, // indices of the roots
     textures: Vec<Texture>,
     materials: Vec<Material>,
-    pub transform: Matrix4<f32>,
+    pub scale: f32,
+    pub rotation: Quaternion<f32>,
+}
+
+impl ImRender for Scene {
+    fn render(&mut self, ui: &imgui::Ui) {
+        if imgui::CollapsingHeader::new(imgui::im_str!("Scene")).build(&ui) {
+            if imgui::Slider::new(imgui::im_str!("Scale"), 0.0001..=1.0).build(&ui, &mut self.scale)
+            {
+                if self.scale < 0.0001 {
+                    self.scale = 0.1
+                }
+            }
+        }
+    }
 }
 
 impl Scene {
@@ -29,9 +46,10 @@ impl Scene {
             tex.bind(i as u32);
         }
 
+        let transform = Matrix4::from(self.rotation) * Matrix4::from_scale(self.scale);
         // start rendering by the roots which will render it's children and so on and so forth
         for &node in self.roots.iter() {
-            self.nodes[node].draw(shader, &self.materials, &self.nodes, self.transform);
+            self.nodes[node].draw(shader, &self.materials, &self.nodes, transform);
         }
         shader.unbind();
     }
@@ -84,7 +102,8 @@ where
         nodes,
         textures,
         materials,
-        transform: Matrix4::identity(),
+        scale: 1.0,
+        rotation: Quaternion::new(0.0, 0.0, 0.0, 1.0),
     })
 }
 

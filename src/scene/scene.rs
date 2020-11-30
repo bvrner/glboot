@@ -2,7 +2,7 @@ use crate::{
     ogl::{material::Material, program::ShaderProgram, texture::Texture},
     ImRender,
 };
-use cgmath::{prelude::*, Matrix4, Quaternion, Vector3};
+use cgmath::{Matrix4, Quaternion, Vector3};
 use thiserror::Error;
 
 use super::{Mesh, Node, Primitive, Vertice};
@@ -19,6 +19,7 @@ pub struct Scene {
     materials: Vec<Material>,
     pub scale: f32,
     pub rotation: Quaternion<f32>,
+    pub translation: Vector3<f32>,
 }
 
 impl ImRender for Scene {
@@ -29,6 +30,11 @@ impl ImRender for Scene {
                 if self.scale < 0.0001 {
                     self.scale = 0.1
                 }
+            }
+
+            let mut vec = self.translation.into();
+            if imgui::InputFloat3::new(ui, imgui::im_str!("Translation"), &mut vec).build() {
+                self.translation = Vector3::from(vec);
             }
         }
     }
@@ -46,7 +52,11 @@ impl Scene {
             tex.bind(i as u32);
         }
 
-        let transform = Matrix4::from(self.rotation) * Matrix4::from_scale(self.scale);
+        // TODO cache the transform
+        let transform = Matrix4::from_translation(self.translation)
+            * Matrix4::from(self.rotation)
+            * Matrix4::from_scale(self.scale);
+
         // start rendering by the roots which will render it's children and so on and so forth
         for &node in self.roots.iter() {
             self.nodes[node].draw(shader, &self.materials, &self.nodes, transform);
@@ -104,6 +114,7 @@ where
         materials,
         scale: 1.0,
         rotation: Quaternion::new(0.0, 0.0, 0.0, 1.0),
+        translation: Vector3::new(0.0, 0.0, 0.0),
     })
 }
 

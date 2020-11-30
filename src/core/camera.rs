@@ -54,7 +54,7 @@ impl Camera {
 impl ImRender for Camera {
     fn render(&mut self, ui: &imgui::Ui) {
         if imgui::CollapsingHeader::new(imgui::im_str!("Camera")).build(&ui) {
-            if imgui::Slider::new(imgui::im_str!("FOV"), 0.1..=90.0).build(&ui, &mut self.fov) {}
+            imgui::Slider::new(imgui::im_str!("FOV"), 0.1..=90.0).build(&ui, &mut self.fov);
         }
     }
 }

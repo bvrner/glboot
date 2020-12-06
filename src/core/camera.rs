@@ -54,6 +54,16 @@ impl Camera {
 impl ImRender for Camera {
     fn render(&mut self, ui: &imgui::Ui) {
         if imgui::CollapsingHeader::new(imgui::im_str!("Camera")).build(&ui) {
+            let mut pos_arr = self.pos.into();
+            if imgui::InputFloat3::new(&ui, imgui::im_str!("Position"), &mut pos_arr).build() {
+                self.pos = pos_arr.into();
+            }
+
+            let mut front_arr = self.front.into();
+            if imgui::InputFloat3::new(&ui, imgui::im_str!("Front"), &mut front_arr).build() {
+                self.pos = front_arr.into();
+            }
+
             imgui::Slider::new(imgui::im_str!("FOV"), 0.1..=90.0).build(&ui, &mut self.fov);
         }
     }

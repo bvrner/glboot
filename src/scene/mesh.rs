@@ -2,6 +2,7 @@ use cgmath::Matrix4;
 use cgmath::{Vector2, Vector3};
 
 use crate::{
+    aabb::Aabb,
     ogl::{
         buffers::{array::VertexArray, index::IndexBuffer, vertex::VertexBuffer},
         material::Material,
@@ -12,7 +13,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Mesh {
     primitives: Vec<Primitive>,
-    // aabb: Aabb
+    pub aabb: Aabb,
 }
 
 #[derive(Debug)]
@@ -23,7 +24,8 @@ pub struct Primitive {
     vbo: VertexBuffer,
     vao: VertexArray,
     indices_count: i32,
-    ibo: IndexBuffer, //aabb: Aabb
+    ibo: IndexBuffer,
+    aabb: Aabb,
 }
 
 #[repr(C)]
@@ -36,7 +38,14 @@ pub struct Vertice {
 
 impl Mesh {
     pub fn new(prim: Vec<Primitive>) -> Self {
-        Self { primitives: prim }
+        let aabb = prim
+            .iter()
+            .fold(Aabb::default(), |bound, prim| bound.surrounds(&prim.aabb));
+
+        Self {
+            primitives: prim,
+            aabb,
+        }
     }
 
     pub fn draw(
@@ -92,7 +101,12 @@ impl Primitive {
         self.vao.unbind();
     }
 
-    pub fn setup(vertices: Vec<Vertice>, indices: Vec<u32>, material: Option<usize>) -> Self {
+    pub fn setup(
+        vertices: Vec<Vertice>,
+        indices: Vec<u32>,
+        material: Option<usize>,
+        aabb: Aabb,
+    ) -> Self {
         let indices_count = indices.len() as i32;
         let vbo = VertexBuffer::new(&vertices);
         let ibo = IndexBuffer::new(&indices);
@@ -112,6 +126,7 @@ impl Primitive {
             vao,
             indices_count,
             material,
+            aabb,
         }
     }
 }

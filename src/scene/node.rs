@@ -6,7 +6,7 @@ use cgmath::Matrix4;
 
 #[derive(Debug)]
 pub struct Node {
-    mesh: Option<Mesh>,
+    pub mesh: Option<Mesh>,
     transform: Matrix4<f32>,
     children: Vec<usize>, // the indices of this node children, see the Scene struct
                           //camera: Camera ???

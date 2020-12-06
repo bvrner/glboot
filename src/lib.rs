@@ -1,5 +1,6 @@
 #[macro_use]
 pub mod macros;
+pub mod aabb;
 pub mod core;
 pub mod ogl;
 pub mod scene;

@@ -1,4 +1,5 @@
 use crate::{
+    aabb::Aabb,
     ogl::{material::Material, program::ShaderProgram, texture::Texture},
     ImRender,
 };
@@ -17,6 +18,7 @@ pub struct Scene {
     roots: Vec<usize>, // indices of the roots
     textures: Vec<Texture>,
     materials: Vec<Material>,
+    pub aabb: Aabb,
     pub scale: f32,
     pub rotation: Quaternion<f32>,
     pub translation: Vector3<f32>,
@@ -99,7 +101,7 @@ where
         .map(Material::from)
         .collect();
 
-    let nodes = document
+    let nodes: Vec<Node> = document
         .nodes()
         .map(|node| process_node(&buffers, &node))
         .collect();
@@ -111,8 +113,17 @@ where
         }
     }
 
+    let aabb = nodes.iter().fold(Aabb::default(), |bound, node| {
+        if let Some(ref mesh) = node.mesh {
+            bound.surrounds(&mesh.aabb)
+        } else {
+            bound
+        }
+    });
+
     Ok(Scene {
         roots,
+        aabb,
         nodes,
         textures,
         materials,
@@ -168,9 +179,9 @@ fn process_mesh(buffers: &[gltf::buffer::Data], m: &gltf::Mesh) -> Mesh {
             } else {
                 vec![]
             };
-            // let bounds = primitive.bounding_box();
+            let bounds = primitive.bounding_box().into();
 
-            Primitive::setup(vertices, indices, primitive.material().index())
+            Primitive::setup(vertices, indices, primitive.material().index(), bounds)
         })
         .collect();
 

@@ -1,4 +1,5 @@
 //TODO refactor this whole mess
+// this file a full blown ad hoc that I write just to test stuff out
 
 use std::{cell::RefCell, rc::Rc};
 
@@ -12,7 +13,7 @@ use glboot::{
     scene::Scene,
 };
 
-use cgmath::{Matrix4, Point2, Point3, SquareMatrix, Vector3};
+use cgmath::{Point2, Point3, Vector3};
 use glfw::{self, Action, Context, Key};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -20,8 +21,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let shader_path = format!("{}/shaders/flattex.glsl", root);
     // let shader_path = format!("{}/shaders/procedural/bricks.glsl", root);
-    // let m_path = format!("{}/models/matilda/scene.gltf", root);
-    let m_path = format!("{}/models/back/scene.gltf", root);
+    let m_path = format!("{}/models/matilda/scene.gltf", root);
+    // let m_path = format!("{}/models/back/scene.gltf", root);
     // let m_path = format!("{}/models/tests/BoxTextured.gltf", root);
     // let m_path = format!("{}/models/dragon.glb", root);
 
@@ -35,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         program.set_uniform("screenTex", 0);
     }
 
-    let mut imgui = glboot::ImGUI::new(&mut window, program.clone());
+    let mut imgui = glboot::ImGUI::new(&mut window);
     let framebuffer = FramebufferBuilder::new(1366, 713)
         .with_depth()
         .with_stencil()
@@ -45,9 +46,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let intermediate = FramebufferBuilder::new(1366, 713).build().unwrap();
 
     // let mut model: Model<StandardVertex> = Model::load(m_path)?;
-    let mut scene = Scene::load(m_path)?;
-    let mut gui_state = glboot::ImGuiState::default();
-    let mut camera = Camera::new(Point3::new(0.0, 0.0, 15.0), Vector3::new(0.0, 0.0, -1.0));
+    let scene = Scene::load(m_path)?;
+    let scene = RefCell::new(scene);
+    let scene = Rc::new(scene);
+
+    imgui.push_render(scene.clone());
+
+    let gui_state = glboot::ImGuiState::default();
+    let camera = Camera::new(Point3::new(0.0, 0.0, 15.0), Vector3::new(0.0, 0.0, -1.0));
+    let camera = Rc::new(RefCell::new(camera));
+
+    imgui.push_render(camera.clone());
 
     let screen_quad = [
         -1.0_f32, 1.0, 0.0, 1.0, -1.0, -1.0, 0.0, 0.0, 1.0, -1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0,
@@ -62,11 +71,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     {
         let mut program = program.borrow_mut();
-        program.set_uniform(
-            "projection",
-            cgmath::perspective(cgmath::Deg(45.0_f32), 1366.0 / 713.0, 0.1_f32, 100f32),
-        );
-        program.set_uniform("view", camera.get_matrix());
+        program.set_uniform("projection", camera.borrow().get_projection(1366.0, 713.0));
+        program.set_uniform("view", camera.borrow().get_matrix());
         // program.set_uniform("model", Matrix4::from_scale(0.1));
     }
 
@@ -95,7 +101,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
 
-        scene.render(&mut program.borrow_mut());
+        scene.borrow().render(&mut program.borrow_mut());
         // model.draw(&mut program.borrow_mut());
         framebuffer.unbind();
         // copy data from fbo to another, needed for anti-aliasing
@@ -133,7 +139,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // the passing of the model is a ad hoc that will be removed when
         // I implement scene and renderer traits and/or structs
-        imgui.draw(&mut window, &mut gui_state, &mut scene);
+        imgui.draw(&mut window);
+
+        {
+            let mut program = program.borrow_mut();
+            program.set_uniform(
+                "projection",
+                camera
+                    .borrow()
+                    .get_projection(window.width as f32, window.height as f32),
+            );
+        }
 
         window.update();
 
@@ -142,7 +158,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // THIS NEEDS A MAJOR REFACTOR
             let mut program = program.borrow_mut();
-            handle_cam(&mut camera, &event, &mut program, delta_time);
+            handle_cam(&mut camera.borrow_mut(), &event, &mut program, delta_time);
             match event {
                 glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
                     window.set_should_close(true);
@@ -160,25 +176,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 glfw::WindowEvent::CursorPos(x, y) => {
                     if arc.is_on {
-                        let rotation = Matrix4::from(arc.drag(Point2::new(x as f32, y as f32)));
+                        let rotation = arc.drag(Point2::new(x as f32, y as f32));
+                        let mut scene = scene.borrow_mut();
+
+                        scene.rotation = rotation;
+
                         // model.rotation = rotation;
                     }
                 }
-                glfw::WindowEvent::FramebufferSize(w, h) => {
-                    window.width = w as u32;
-                    window.height = h as u32;
+                // glfw::WindowEvent::FramebufferSize(w, h) => {
+                //     window.width = w as u32;
+                //     window.height = h as u32;
 
-                    arc.update(w as f32, h as f32);
+                //     arc.update(w as f32, h as f32);
 
-                    let proj = cgmath::perspective(
-                        cgmath::Deg(gui_state.cam_slider),
-                        w as f32 / h as f32,
-                        0.1_f32,
-                        100f32,
-                    );
+                //     let proj = cgmath::perspective(
+                //         cgmath::Deg(gui_state.cam_slider),
+                //         w as f32 / h as f32,
+                //         0.1_f32,
+                //         100f32,
+                //     );
 
-                    program.set_uniform("projection", proj);
-                }
+                //     program.set_uniform("projection", proj);
+                // }
                 _ => {}
             }
         }

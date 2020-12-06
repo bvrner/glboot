@@ -53,8 +53,12 @@ impl Scene {
         }
 
         // TODO cache the transform
-        let transform = Matrix4::from_translation(self.translation)
-            * Matrix4::from(self.rotation)
+        // let transform = Matrix4::from_translation(self.translation)
+        //     * Matrix4::from(self.rotation)
+        //     * Matrix4::from_scale(self.scale);
+        // TODO maybe a option to select the transform order?
+        let transform = Matrix4::from(self.rotation)
+            * Matrix4::from_translation(self.translation)
             * Matrix4::from_scale(self.scale);
 
         // start rendering by the roots which will render it's children and so on and so forth

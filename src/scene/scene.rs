@@ -1,6 +1,6 @@
 use crate::{
     aabb::Aabb,
-    ogl::{material::Material, program::ShaderProgram, texture::Texture},
+    ogl::{buffers::*, material::Material, program::ShaderProgram, texture::Texture},
     ImRender,
 };
 use cgmath::{prelude::*, Matrix4, Quaternion, Vector3};
@@ -23,6 +23,12 @@ pub struct Scene {
     pub scale: f32,
     pub rotation: Quaternion<f32>,
     pub translation: Vector3<f32>,
+
+    // Aabb rendering stuff
+    // should this be part of the Aabb structure?
+    vao_: VertexArray,
+    vbo_: VertexBuffer,
+    ibo_: IndexBuffer,
 }
 
 impl ImRender for Scene {
@@ -49,7 +55,7 @@ impl Scene {
         load_gltf(path)
     }
 
-    pub fn render(&self, shader: &mut ShaderProgram) {
+    pub fn render(&self, shader: &mut ShaderProgram, aabb_shader: &mut ShaderProgram) {
         shader.bind();
 
         for (i, tex) in self.textures.iter().enumerate() {
@@ -70,6 +76,35 @@ impl Scene {
             self.nodes[node].draw(shader, &self.materials, &self.nodes, transform);
         }
         shader.unbind();
+
+        aabb_shader.bind();
+
+        aabb_shader.set_uniform("trans", transform);
+        aabb_shader.send_uniforms();
+
+        self.vao_.bind();
+        self.ibo_.bind();
+
+        // Aabb indices will always be the same, so it's safe to hardcode
+        unsafe {
+            gl::DrawElements(gl::LINE_LOOP, 4, gl::UNSIGNED_INT, std::ptr::null());
+            gl::DrawElements(
+                gl::LINE_LOOP,
+                4,
+                gl::UNSIGNED_INT,
+                (4 * 4) as *const u32 as *const std::ffi::c_void,
+            );
+            gl::DrawElements(
+                gl::LINES,
+                8,
+                gl::UNSIGNED_INT,
+                (8 * 4) as *const u32 as *const std::ffi::c_void,
+            );
+        }
+
+        aabb_shader.unbind();
+        self.vao_.unbind();
+        self.ibo_.unbind();
     }
 
     fn gen_aabb(&mut self) {
@@ -80,7 +115,19 @@ impl Scene {
             aabb = aabb.surrounds(&root_aabb);
         }
 
+        let (aabb_v, aabb_i) = aabb.gen_vertices();
+
+        let vao_ = VertexArray::new();
+        let layout = layout![(3, f32, gl::FLOAT)];
+        let vbo_ = VertexBuffer::new(&aabb_v);
+        let ibo_ = IndexBuffer::new(&aabb_i);
+
+        vao_.add_buffer(&vbo_, &layout);
+
         self.aabb = aabb;
+        self.vao_ = vao_;
+        self.vbo_ = vbo_;
+        self.ibo_ = ibo_;
     }
 }
 
@@ -130,13 +177,16 @@ where
 
     let mut scene = Scene {
         roots,
-        aabb: Aabb::default(),
         nodes,
         textures,
         materials,
         scale: 1.0,
         rotation: Quaternion::new(1.0, 0.0, 0.0, 0.0),
         translation: Vector3::new(0.0, 0.0, 0.0),
+        aabb: Aabb::default(),
+        vao_: VertexArray::default(),
+        vbo_: VertexBuffer::default(),
+        ibo_: IndexBuffer::default(),
     };
 
     scene.gen_aabb();

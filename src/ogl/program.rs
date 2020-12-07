@@ -35,6 +35,19 @@ impl ShaderProgram {
         Self::from_shaders(v, f, g)
     }
 
+    pub fn from_sources(
+        v_source: &str,
+        f_source: &str,
+        _g_source: Option<&str>,
+    ) -> Result<Self, ShaderError> {
+        let (v, f) = (
+            Shader::from_source(v_source, ShaderKind::Vertex)?,
+            Shader::from_source(f_source, ShaderKind::Fragment)?,
+        );
+
+        Self::from_shaders(v, f, None)
+    }
+
     pub fn from_files<P: AsRef<Path>>(
         v_path: P,
         f_path: P,

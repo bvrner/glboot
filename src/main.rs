@@ -76,6 +76,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // program.set_uniform("model", Matrix4::from_scale(0.1));
     }
 
+    let mut aabb_program =
+        ShaderProgram::from_sources(glboot::aabb::SOURCE_V, glboot::aabb::SOURCE_F, None)?;
+
     let mut arc = ArcBall::new(1366.0, 713.0);
     let events = window.events.take().unwrap();
     let mut last_frame = 0.0;
@@ -100,8 +103,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 },
             );
         }
+        aabb_program.set_uniform("view", camera.borrow().get_matrix());
+        aabb_program.set_uniform(
+            "proj",
+            camera
+                .borrow()
+                .get_projection(window.width as f32, window.height as f32),
+        );
 
-        scene.borrow().render(&mut program.borrow_mut());
+        scene
+            .borrow()
+            .render(&mut program.borrow_mut(), &mut aabb_program);
+
         // model.draw(&mut program.borrow_mut());
         framebuffer.unbind();
         // copy data from fbo to another, needed for anti-aliasing

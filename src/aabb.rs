@@ -35,82 +35,16 @@ impl Aabb {
 
     pub fn gen_vertices(&self) -> (Vec<Vector3<f32>>, Vec<u32>) {
         let v = vec![
-            // front
-            vec3(self.max.x, self.max.y, self.min.z), // top right
-            vec3(self.max.x, self.min.y, self.min.z), // bottom right
-            vec3(self.min.x, self.max.y, self.min.z), // top left
-            vec3(self.min.x, self.min.y, self.min.z), // bottom left
-            // top
-            vec3(self.max.x, self.max.y, self.max.z), // top right
-            vec3(self.max.x, self.max.y, self.min.z), // bottom right
-            vec3(self.min.x, self.max.y, self.max.z), // top left
-            vec3(self.min.x, self.max.y, self.min.z), // bottom left
-            // bottom
-            vec3(self.max.x, self.min.y, self.max.z), // top right
-            vec3(self.max.x, self.min.y, self.min.z), // bottom right
-            vec3(self.min.x, self.min.y, self.max.z), // top left
-            vec3(self.min.x, self.min.y, self.min.z), // bottom left
-            // back
-            vec3(self.max.x, self.max.y, self.max.z), // top right
-            vec3(self.max.x, self.min.y, self.max.z), // bottom right
-            vec3(self.min.x, self.max.y, self.max.z), // top left
-            vec3(self.min.x, self.min.y, self.max.z), // bottom left
-            // left
-            vec3(self.min.x, self.max.y, self.min.z), // top right
-            vec3(self.min.x, self.min.y, self.min.z), // bottom right
-            vec3(self.min.x, self.max.y, self.max.z), // top left
-            vec3(self.min.x, self.min.y, self.max.z), // bottom left
-            // right
-            vec3(self.max.x, self.max.y, self.max.z), // top right
-            vec3(self.max.x, self.min.y, self.max.z), // bottom right
-            vec3(self.max.x, self.max.y, self.min.z), // top left
-            vec3(self.max.x, self.min.y, self.min.z), // bottom left
+            vec3(self.min.x, self.min.y, self.max.z),
+            vec3(self.max.x, self.min.y, self.max.z),
+            vec3(self.max.x, self.max.y, self.max.z),
+            vec3(self.min.x, self.max.y, self.max.z),
+            vec3(self.min.x, self.min.y, self.min.z),
+            vec3(self.max.x, self.min.y, self.min.z),
+            vec3(self.max.x, self.max.y, self.min.z),
+            vec3(self.min.x, self.max.y, self.min.z),
         ];
-
-        let i = vec![
-            // front
-            0,
-            1,
-            2,
-            1,
-            2,
-            3,
-            // top
-            0 + 4,
-            1 + 4,
-            2 + 4,
-            1 + 4,
-            2 + 4,
-            3 + 4,
-            // bottom
-            0 + 8,
-            1 + 8,
-            2 + 8,
-            1 + 8,
-            2 + 8,
-            3 + 8,
-            // back
-            0 + 12,
-            1 + 12,
-            2 + 12,
-            1 + 12,
-            2 + 12,
-            3 + 12,
-            // left
-            0 + 16,
-            1 + 16,
-            2 + 16,
-            1 + 16,
-            2 + 16,
-            3 + 16,
-            // right
-            0 + 20,
-            1 + 20,
-            2 + 20,
-            1 + 20,
-            2 + 20,
-            3 + 20,
-        ];
+        let i = vec![0, 1, 2, 3, 4, 5, 6, 7, 0, 4, 1, 5, 2, 6, 3, 7];
 
         (v, i)
     }

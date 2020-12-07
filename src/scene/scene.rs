@@ -29,6 +29,7 @@ pub struct Scene {
     vao_: VertexArray,
     vbo_: VertexBuffer,
     ibo_: IndexBuffer,
+    draw_aabb: bool,
 }
 
 impl ImRender for Scene {
@@ -46,6 +47,8 @@ impl ImRender for Scene {
             if imgui::InputFloat3::new(ui, imgui::im_str!("Translation"), &mut vec).build() {
                 self.translation = vec.into();
             }
+
+            ui.checkbox(imgui::im_str!("AABB"), &mut self.draw_aabb);
         }
     }
 }
@@ -77,34 +80,36 @@ impl Scene {
         }
         shader.unbind();
 
-        aabb_shader.bind();
+        if self.draw_aabb {
+            aabb_shader.bind();
 
-        aabb_shader.set_uniform("trans", transform);
-        aabb_shader.send_uniforms();
+            aabb_shader.set_uniform("trans", transform);
+            aabb_shader.send_uniforms();
 
-        self.vao_.bind();
-        self.ibo_.bind();
+            self.vao_.bind();
+            self.ibo_.bind();
 
-        // Aabb indices will always be the same, so it's safe to hardcode
-        unsafe {
-            gl::DrawElements(gl::LINE_LOOP, 4, gl::UNSIGNED_INT, std::ptr::null());
-            gl::DrawElements(
-                gl::LINE_LOOP,
-                4,
-                gl::UNSIGNED_INT,
-                (4 * 4) as *const u32 as *const std::ffi::c_void,
-            );
-            gl::DrawElements(
-                gl::LINES,
-                8,
-                gl::UNSIGNED_INT,
-                (8 * 4) as *const u32 as *const std::ffi::c_void,
-            );
+            // Aabb indices will always be the same, so it's safe to hardcode
+            unsafe {
+                gl::DrawElements(gl::LINE_LOOP, 4, gl::UNSIGNED_INT, std::ptr::null());
+                gl::DrawElements(
+                    gl::LINE_LOOP,
+                    4,
+                    gl::UNSIGNED_INT,
+                    (4 * 4) as *const u32 as *const std::ffi::c_void,
+                );
+                gl::DrawElements(
+                    gl::LINES,
+                    8,
+                    gl::UNSIGNED_INT,
+                    (8 * 4) as *const u32 as *const std::ffi::c_void,
+                );
+            }
+
+            aabb_shader.unbind();
+            self.vao_.unbind();
+            self.ibo_.unbind();
         }
-
-        aabb_shader.unbind();
-        self.vao_.unbind();
-        self.ibo_.unbind();
     }
 
     fn gen_aabb(&mut self) {
@@ -187,6 +192,7 @@ where
         vao_: VertexArray::default(),
         vbo_: VertexBuffer::default(),
         ibo_: IndexBuffer::default(),
+        draw_aabb: false,
     };
 
     scene.gen_aabb();

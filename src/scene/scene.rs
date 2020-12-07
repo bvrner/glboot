@@ -3,7 +3,7 @@ use crate::{
     ogl::{material::Material, program::ShaderProgram, texture::Texture},
     ImRender,
 };
-use cgmath::{Matrix4, Quaternion, Vector3};
+use cgmath::{prelude::*, Matrix4, Quaternion, Vector3};
 use thiserror::Error;
 
 use super::{Mesh, Node, Primitive, Vertice};
@@ -14,6 +14,7 @@ use std::path::Path;
 
 #[derive(Debug)]
 pub struct Scene {
+    // use boxed slices instead?
     nodes: Vec<Node>,  // all nodes
     roots: Vec<usize>, // indices of the roots
     textures: Vec<Texture>,
@@ -27,6 +28,7 @@ pub struct Scene {
 impl ImRender for Scene {
     fn render(&mut self, ui: &imgui::Ui) {
         if imgui::CollapsingHeader::new(imgui::im_str!("Scene")).build(&ui) {
+            ui.bullet_text(imgui::im_str!("Model"));
             if imgui::Slider::new(imgui::im_str!("Scale"), 0.0001..=1.0).build(&ui, &mut self.scale)
             {
                 if self.scale < 0.0001 {
@@ -36,7 +38,7 @@ impl ImRender for Scene {
 
             let mut vec = self.translation.into();
             if imgui::InputFloat3::new(ui, imgui::im_str!("Translation"), &mut vec).build() {
-                self.translation = Vector3::from(vec);
+                self.translation = vec.into();
             }
         }
     }
@@ -68,6 +70,17 @@ impl Scene {
             self.nodes[node].draw(shader, &self.materials, &self.nodes, transform);
         }
         shader.unbind();
+    }
+
+    fn gen_aabb(&mut self) {
+        let mut aabb = Aabb::default();
+
+        for &node in self.roots.iter() {
+            let root_aabb = self.nodes[node].gen_aabb(&self.nodes, Matrix4::identity());
+            aabb = aabb.surrounds(&root_aabb);
+        }
+
+        self.aabb = aabb;
     }
 }
 
@@ -106,6 +119,8 @@ where
         .map(|node| process_node(&buffers, &node))
         .collect();
 
+    // this likely won't work for files with multiple scenes
+    // but It's not a concern for now
     let mut roots = Vec::new();
     for scene in document.scenes() {
         for node in scene.nodes() {
@@ -113,24 +128,19 @@ where
         }
     }
 
-    let aabb = nodes.iter().fold(Aabb::default(), |bound, node| {
-        if let Some(ref mesh) = node.mesh {
-            bound.surrounds(&mesh.aabb)
-        } else {
-            bound
-        }
-    });
-
-    Ok(Scene {
+    let mut scene = Scene {
         roots,
-        aabb,
+        aabb: Aabb::default(),
         nodes,
         textures,
         materials,
         scale: 1.0,
-        rotation: Quaternion::new(0.0, 0.0, 0.0, 1.0),
+        rotation: Quaternion::new(1.0, 0.0, 0.0, 0.0),
         translation: Vector3::new(0.0, 0.0, 0.0),
-    })
+    };
+
+    scene.gen_aabb();
+    Ok(scene)
 }
 
 fn process_node(buffers: &[gltf::buffer::Data], node: &gltf::Node) -> Node {

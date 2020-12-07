@@ -43,10 +43,27 @@ impl ImRender for Scene {
                 }
             }
 
+            if ui.small_button(imgui::im_str!("Reset Scale")) {
+                self.scale = 1.0;
+            }
+
             let mut vec = self.translation.into();
             if imgui::InputFloat3::new(ui, imgui::im_str!("Translation"), &mut vec).build() {
                 self.translation = vec.into();
             }
+
+            if ui.small_button(imgui::im_str!("Reset Trans.")) {
+                self.translation = Vector3::new(0.0, 0.0, 0.0);
+            }
+
+            // let mut vec = self.rotation.into();
+            // if imgui::InputFloat4::new(ui, imgui::im_str!("Rotation"), &mut vec).build() {
+            //     self.rotation = vec.into();
+            // }
+
+            // if ui.small_button(imgui::im_str!("Reset")) {
+            //     self.rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
+            // }
 
             ui.checkbox(imgui::im_str!("AABB"), &mut self.draw_aabb);
         }

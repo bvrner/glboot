@@ -150,8 +150,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             quad_vao.unbind();
         }
 
-        // the passing of the model is a ad hoc that will be removed when
-        // I implement scene and renderer traits and/or structs
         imgui.draw(&mut window);
 
         {

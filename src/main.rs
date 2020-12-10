@@ -9,6 +9,7 @@ use glboot::{
     ogl::{
         buffers::{FramebufferBuilder, VertexArray, VertexBuffer},
         program::ShaderProgram,
+        renderer::Renderer,
         shaders::ShaderError, // texture::Texture,
     },
     scene::Scene,
@@ -34,27 +35,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             gl::Enable(gl::DEBUG_OUTPUT);
             gl::DebugMessageCallback(Some(callback), std::ptr::null());
         }
-        gl::PolygonMode(gl::FRONT_AND_BACK, gl::QUADS);
+        // gl::PolygonMode(gl::FRONT_AND_BACK, gl::QUADS);
     }
 
-    let program = Rc::new(RefCell::new(ShaderProgram::from_file(shader_path)?));
-    let mut post_programs = load_post_shaders()?;
-    // let post_program = Rc::new(RefCell::new(ShaderProgram::from_file(post_path)?));
+    let program = ShaderProgram::from_file(shader_path)?;
+    let mut pprogram = ShaderProgram::from_file(format!("{}/shaders/post/flat_post.glsl", root))?;
+    pprogram.set_uniform("screenTex", 0);
 
-    for program in post_programs.iter_mut() {
-        program.set_uniform("screenTex", 0);
-    }
-
+    let mut renderer = Renderer::create(1366, 720, program, pprogram);
     let mut imgui = glboot::ImGUI::new(&mut window);
-    let framebuffer = FramebufferBuilder::new(1366, 713)
-        .with_depth()
-        .with_stencil()
-        .with_samples(4)
-        .build()
-        .unwrap();
-    let intermediate = FramebufferBuilder::new(1366, 713).build().unwrap();
 
-    // let mut model: Model<StandardVertex> = Model::load(m_path)?;
     let scene = Scene::load(m_path)?;
     let scene = RefCell::new(scene);
     let scene = Rc::new(scene);
@@ -79,9 +69,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     quad_vao.add_buffer(&quad_vbo, &layout);
 
     {
-        let mut program = program.borrow_mut();
-        program.set_uniform("projection", camera.borrow().get_projection(1366.0, 713.0));
-        program.set_uniform("view", camera.borrow().get_matrix());
+        // let mut program = program.borrow_mut();
+        renderer
+            .main
+            .set_uniform("projection", camera.borrow().get_projection(1366.0, 713.0));
+        renderer
+            .main
+            .set_uniform("view", camera.borrow().get_matrix());
         // program.set_uniform("model", Matrix4::from_scale(0.1));
     }
 
@@ -97,73 +91,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let delta_time = current_frame - last_frame;
         last_frame = current_frame;
 
-        // first pass, render scene to texture
-        framebuffer.bind();
-        unsafe {
-            gl::Viewport(0, 0, framebuffer.width, framebuffer.height);
-            gl::Enable(gl::DEPTH_TEST);
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-            gl::PolygonMode(
-                gl::FRONT_AND_BACK,
-                if gui_state.wireframe {
-                    gl::LINE
-                } else {
-                    gl::FILL
-                },
-            );
-        }
-        aabb_program.set_uniform("view", camera.borrow().get_matrix());
-        aabb_program.set_uniform(
-            "proj",
-            camera
-                .borrow()
-                .get_projection(window.width as f32, window.height as f32),
-        );
-
-        scene
-            .borrow()
-            .render(&mut program.borrow_mut(), &mut aabb_program);
-
-        // model.draw(&mut program.borrow_mut());
-        framebuffer.unbind();
-        // copy data from fbo to another, needed for anti-aliasing
-        framebuffer.blit(&intermediate);
-
-        // second pass, render that texture to the screen
-        {
-            // properly select the shader, since the effects done by kernels
-            // share the same shader in the list
-            // also if we are using the kernel shader we need to set which kernel to use
-            let post_opt = gui_state.post_option;
-            let post_program = if post_opt > 2 && post_opt < 6 {
-                let program = &mut post_programs[3];
-                program.set_uniform("option", (post_opt - 3) as i32);
-                program
-            } else {
-                &mut post_programs[if post_opt < 2 { post_opt } else { 4 }]
-            };
-
-            post_program.bind();
-            post_program.send_uniforms();
-            intermediate.bind_textures(0);
-            quad_vao.bind();
-            unsafe {
-                gl::Viewport(0, 0, window.width as i32, window.height as i32);
-                gl::Disable(gl::DEPTH_TEST);
-                gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
-                gl::Clear(gl::COLOR_BUFFER_BIT);
-                gl::DrawArrays(gl::TRIANGLES, 0, 6);
-            }
-            intermediate.unbind_textures();
-            post_program.unbind();
-            quad_vao.unbind();
-        }
+        renderer.render(&scene.borrow(), &mut aabb_program);
 
         imgui.draw(&mut window);
 
         {
-            let mut program = program.borrow_mut();
-            program.set_uniform(
+            // let mut program = program.borrow_mut();
+            renderer.main.set_uniform(
                 "projection",
                 camera
                     .borrow()
@@ -177,8 +111,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             imgui.handle_event(&event);
 
             // THIS NEEDS A MAJOR REFACTOR
-            let mut program = program.borrow_mut();
-            handle_cam(&mut camera.borrow_mut(), &event, &mut program, delta_time);
+            // let mut program = program.borrow_mut();
+            // handle_cam(&mut camera.borrow_mut(), &event, &mut program, delta_time);
             match event {
                 glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
                     window.set_should_close(true);
@@ -246,33 +180,33 @@ fn setup() -> Window {
 }
 
 // TODO update Camera struct to handle this
-fn handle_cam(
-    camera: &mut Camera,
-    event: &glfw::WindowEvent,
-    program: &mut ShaderProgram,
-    delta: f32,
-) {
-    let cam_speed = delta * 2.5;
-    match event {
-        glfw::WindowEvent::Key(Key::W, _, _, _) => {
-            camera.pos += cam_speed * camera.front;
-            program.set_uniform("view", camera.get_matrix());
-        }
-        glfw::WindowEvent::Key(Key::Space, _, _, _) => {
-            camera.pos += cam_speed * camera.up;
-            program.set_uniform("view", camera.get_matrix());
-        }
-        glfw::WindowEvent::Key(Key::LeftShift, _, _, _) => {
-            camera.pos -= cam_speed * camera.up;
-            program.set_uniform("view", camera.get_matrix());
-        }
-        glfw::WindowEvent::Key(Key::S, _, _, _) => {
-            camera.pos -= cam_speed * camera.front;
-            program.set_uniform("view", camera.get_matrix());
-        }
-        _ => {}
-    }
-}
+// fn handle_cam(
+//     camera: &mut Camera,
+//     event: &glfw::WindowEvent,
+//     program: &mut ShaderProgram,
+//     delta: f32,
+// ) {
+//     let cam_speed = delta * 2.5;
+//     match event {
+//         glfw::WindowEvent::Key(Key::W, _, _, _) => {
+//             camera.pos += cam_speed * camera.front;
+//             program.set_uniform("view", camera.get_matrix());
+//         }
+//         glfw::WindowEvent::Key(Key::Space, _, _, _) => {
+//             camera.pos += cam_speed * camera.up;
+//             program.set_uniform("view", camera.get_matrix());
+//         }
+//         glfw::WindowEvent::Key(Key::LeftShift, _, _, _) => {
+//             camera.pos -= cam_speed * camera.up;
+//             program.set_uniform("view", camera.get_matrix());
+//         }
+//         glfw::WindowEvent::Key(Key::S, _, _, _) => {
+//             camera.pos -= cam_speed * camera.front;
+//             program.set_uniform("view", camera.get_matrix());
+//         }
+//         _ => {}
+//     }
+// }
 
 fn load_post_shaders() -> Result<Vec<ShaderProgram>, ShaderError> {
     let root = format!("{}/assets/shaders/post", env!("CARGO_MANIFEST_DIR"));

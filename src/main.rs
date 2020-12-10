@@ -34,6 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             gl::Enable(gl::DEBUG_OUTPUT);
             gl::DebugMessageCallback(Some(callback), std::ptr::null());
         }
+        gl::PolygonMode(gl::FRONT_AND_BACK, gl::QUADS);
     }
 
     let program = Rc::new(RefCell::new(ShaderProgram::from_file(shader_path)?));
@@ -285,8 +286,8 @@ fn load_post_shaders() -> Result<Vec<ShaderProgram>, ShaderError> {
     ])
 }
 extern "system" fn callback(
-    _source: GLenum,
-    _gltype: GLenum,
+    source: GLenum,
+    gltype: GLenum,
     _id: GLuint,
     _severity: GLenum,
     _length: GLsizei,
@@ -295,10 +296,32 @@ extern "system" fn callback(
 ) {
     use std::ffi::CStr;
 
+    let source = match source {
+        gl::DEBUG_SOURCE_API => "OpenGL API.",
+        gl::DEBUG_SOURCE_WINDOW_SYSTEM => "Window-system API.",
+        gl::DEBUG_SOURCE_SHADER_COMPILER => "Shader compiler.",
+        gl::DEBUG_SOURCE_THIRD_PARTY => "Third party application.",
+        gl::DEBUG_SOURCE_APPLICATION => "User.",
+        _ => "Other.",
+    };
+
+    let ty = match gltype {
+        gl::DEBUG_TYPE_ERROR => "Error",
+        gl::DEBUG_TYPE_DEPRECATED_BEHAVIOR => "Deprecated Behavior.",
+        gl::DEBUG_TYPE_UNDEFINED_BEHAVIOR => "Undefined Behavior.",
+        gl::DEBUG_TYPE_PORTABILITY => "Unportable functionality.",
+        gl::DEBUG_TYPE_PERFORMANCE => "Possible performance issue.",
+        gl::DEBUG_TYPE_MARKER => "Command stream annotation.",
+        _ => "Other.",
+    };
+
     let c_str = unsafe { CStr::from_ptr(message) };
 
     if let Ok(c_str) = c_str.to_str() {
-        eprintln!("OpenGL Error: {}", c_str);
+        eprintln!(
+            "OpenGL Log:\n\tSource: {}\n\tType: {}\n\tMessage: {}\n\n",
+            source, ty, c_str
+        );
     } else {
         eprintln!("OpenGL Error: Couldn't convert message to string.");
     }

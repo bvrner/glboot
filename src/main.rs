@@ -1,6 +1,7 @@
 //TODO refactor this whole mess
 // this file a full blown ad hoc that I write just to test stuff out
 
+use gl::types::*;
 use std::{cell::RefCell, rc::Rc};
 
 use glboot::{
@@ -27,6 +28,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let m_path = format!("{}/models/dragon.glb", root);
 
     let mut window = setup();
+
+    unsafe {
+        if gl::DebugMessageCallback::is_loaded() {
+            gl::Enable(gl::DEBUG_OUTPUT);
+            gl::DebugMessageCallback(Some(callback), std::ptr::null());
+        }
+    }
 
     let program = Rc::new(RefCell::new(ShaderProgram::from_file(shader_path)?));
     let mut post_programs = load_post_shaders()?;
@@ -275,4 +283,23 @@ fn load_post_shaders() -> Result<Vec<ShaderProgram>, ShaderError> {
         ShaderProgram::from_file(format!("{}/kernel.glsl", root))?,
         ShaderProgram::from_file(format!("{}/sobel.glsl", root))?,
     ])
+}
+extern "system" fn callback(
+    _source: GLenum,
+    _gltype: GLenum,
+    _id: GLuint,
+    _severity: GLenum,
+    _length: GLsizei,
+    message: *const GLchar,
+    _: *mut std::ffi::c_void,
+) {
+    use std::ffi::CStr;
+
+    let c_str = unsafe { CStr::from_ptr(message) };
+
+    if let Ok(c_str) = c_str.to_str() {
+        eprintln!("OpenGL Error: {}", c_str);
+    } else {
+        eprintln!("OpenGL Error: Couldn't convert message to string.");
+    }
 }

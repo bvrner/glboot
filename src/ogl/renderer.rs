@@ -120,11 +120,36 @@ impl Renderer {
 impl ImRender for Renderer {
     fn render(&mut self, ui: &imgui::Ui) {
         if imgui::CollapsingHeader::new(imgui::im_str!("Renderer")).build(ui) {
-            if imgui::ColorPicker::new(imgui::im_str!("BG Color"), &mut self.bg_col).build(ui) {
-                unsafe {
-                    gl::ClearColor(self.bg_col[0], self.bg_col[1], self.bg_col[2], 1.0);
-                }
-            }
+            imgui::TreeNode::new(imgui::im_str!("r1"))
+                .label(imgui::im_str!("Color"))
+                .build(ui, || {
+                    if imgui::ColorPicker::new(imgui::im_str!("BG Color"), &mut self.bg_col)
+                        .build(ui)
+                    {
+                        unsafe {
+                            gl::ClearColor(self.bg_col[0], self.bg_col[1], self.bg_col[2], 1.0);
+                        }
+                    }
+                });
+            imgui::TreeNode::new(imgui::im_str!("r2"))
+                .label(imgui::im_str!("Shaders"))
+                .build(ui, || {
+                    if let Some(front) = imgui::TreeNode::new(imgui::im_str!("r2.1"))
+                        .label(imgui::im_str!("Front"))
+                        .push(ui)
+                    {
+                        ui.text("WIP");
+                        front.pop(ui);
+                    }
+
+                    if let Some(front) = imgui::TreeNode::new(imgui::im_str!("r2.2"))
+                        .label(imgui::im_str!("Back"))
+                        .push(ui)
+                    {
+                        ui.text("WIP");
+                        front.pop(ui);
+                    }
+                });
         }
     }
 }

@@ -35,37 +35,42 @@ pub struct Scene {
 impl ImRender for Scene {
     fn render(&mut self, ui: &imgui::Ui) {
         if imgui::CollapsingHeader::new(imgui::im_str!("Scene")).build(&ui) {
-            ui.bullet_text(imgui::im_str!("Model"));
-            if imgui::Slider::new(imgui::im_str!("Scale"), 0.0001..=1.0).build(&ui, &mut self.scale)
-            {
-                if self.scale < 0.0001 {
-                    self.scale = 0.1
-                }
-            }
+            imgui::TreeNode::new(imgui::im_str!("m1"))
+                .label(imgui::im_str!("Model"))
+                .build(ui, || {
+                    if imgui::Slider::new(imgui::im_str!("Scale"), 0.0001..=1.0)
+                        .build(&ui, &mut self.scale)
+                    {
+                        if self.scale < 0.0001 {
+                            self.scale = 0.1
+                        }
+                    }
 
-            if ui.small_button(imgui::im_str!("Reset Scale")) {
-                self.scale = 1.0;
-            }
+                    if ui.small_button(imgui::im_str!("Reset Scale")) {
+                        self.scale = 1.0;
+                    }
 
-            let mut vec = self.translation.into();
-            if imgui::InputFloat3::new(ui, imgui::im_str!("Translation"), &mut vec).build() {
-                self.translation = vec.into();
-            }
+                    let mut vec = self.translation.into();
+                    if imgui::InputFloat3::new(ui, imgui::im_str!("Translation"), &mut vec).build()
+                    {
+                        self.translation = vec.into();
+                    }
 
-            if ui.small_button(imgui::im_str!("Reset Trans.")) {
-                self.translation = Vector3::new(0.0, 0.0, 0.0);
-            }
+                    if ui.small_button(imgui::im_str!("Reset Trans.")) {
+                        self.translation = Vector3::new(0.0, 0.0, 0.0);
+                    }
 
-            // let mut vec = self.rotation.into();
-            // if imgui::InputFloat4::new(ui, imgui::im_str!("Rotation"), &mut vec).build() {
-            //     self.rotation = vec.into();
-            // }
+                    // let mut vec = self.rotation.into();
+                    // if imgui::InputFloat4::new(ui, imgui::im_str!("Rotation"), &mut vec).build() {
+                    //     self.rotation = vec.into();
+                    // }
 
-            // if ui.small_button(imgui::im_str!("Reset")) {
-            //     self.rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
-            // }
+                    // if ui.small_button(imgui::im_str!("Reset")) {
+                    //     self.rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
+                    // }
 
-            ui.checkbox(imgui::im_str!("AABB"), &mut self.draw_aabb);
+                    ui.checkbox(imgui::im_str!("AABB"), &mut self.draw_aabb);
+                });
         }
     }
 }

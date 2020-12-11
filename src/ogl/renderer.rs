@@ -73,18 +73,6 @@ impl Renderer {
 
         // second pass, render that texture to the screen
         {
-            // properly select the shader, since the effects done by kernels
-            // share the same shader in the list
-            // also if we are using the kernel shader we need to set which kernel to use
-            // let post_opt = gui_state.post_option;
-            // let post_program = if post_opt > 2 && post_opt < 6 {
-            //     let program = &mut post_programs[3];
-            //     program.set_uniform("option", (post_opt - 3) as i32);
-            //     program
-            // } else {
-            //     &mut post_programs[if post_opt < 2 { post_opt } else { 4 }]
-            // };
-
             self.post.bind();
             self.post.send_uniforms();
             self.int.bind_textures(0);
@@ -135,19 +123,19 @@ impl ImRender for Renderer {
                 .label(imgui::im_str!("Shaders"))
                 .build(ui, || {
                     if let Some(front) = imgui::TreeNode::new(imgui::im_str!("r2.1"))
-                        .label(imgui::im_str!("Front"))
+                        .label(imgui::im_str!("First pass"))
                         .push(ui)
                     {
                         ui.text("WIP");
                         front.pop(ui);
                     }
 
-                    if let Some(front) = imgui::TreeNode::new(imgui::im_str!("r2.2"))
-                        .label(imgui::im_str!("Back"))
+                    if let Some(back) = imgui::TreeNode::new(imgui::im_str!("r2.2"))
+                        .label(imgui::im_str!("Second pass"))
                         .push(ui)
                     {
                         ui.text("WIP");
-                        front.pop(ui);
+                        back.pop(ui);
                     }
                 });
         }

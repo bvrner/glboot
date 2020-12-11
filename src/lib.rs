@@ -17,31 +17,6 @@ pub struct ImGUI {
     renders: Vec<Rc<RefCell<dyn ImRender>>>, // main_shader: Rc<RefCell<ShaderProgram>>, // TODO remove this
 }
 
-// This is a pretty wack way to deal with options
-// I'll have to rethink it later
-#[derive(Debug, Clone)]
-pub struct ImGuiState {
-    pub bg_color: [f32; 4],
-    pub wireframe: bool,
-    pub env: bool,
-    pub cam_slider: f32,
-    pub scale: f32,
-    pub post_option: usize,
-}
-
-impl Default for ImGuiState {
-    fn default() -> ImGuiState {
-        ImGuiState {
-            bg_color: [0.1, 0.1, 0.1, 0.1],
-            wireframe: false,
-            env: true,
-            cam_slider: 45.0,
-            scale: 0.1,
-            post_option: 0,
-        }
-    }
-}
-
 pub trait ImRender {
     fn render(&mut self, _: &Ui) {}
 }

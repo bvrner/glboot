@@ -1,5 +1,5 @@
 use super::{buffers::*, program::ShaderProgram};
-use crate::scene::Scene;
+use crate::{scene::Scene, ImRender};
 
 const SCREEN_QUAD: [f32; 24] = [
     -1.0_f32, 1.0, 0.0, 1.0, -1.0, -1.0, 0.0, 0.0, 1.0, -1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0, 1.0,
@@ -16,6 +16,7 @@ pub struct Renderer {
 
     //general options
     p_mode: gl::types::GLenum,
+    bg_col: [f32; 3],
 }
 
 #[derive(Debug)]
@@ -50,6 +51,7 @@ impl Renderer {
             main,
             post,
             p_mode: gl::FILL,
+            bg_col: [0.0, 0.0, 0.0],
         }
     }
 
@@ -61,13 +63,6 @@ impl Renderer {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::PolygonMode(gl::FRONT_AND_BACK, self.p_mode);
         }
-        // aabb_program.set_uniform("view", camera.borrow().get_matrix());
-        // aabb_program.set_uniform(
-        //     "proj",
-        //     camera
-        //         .borrow()
-        //         .get_projection(window.width as f32, window.height as f32),
-        // );
 
         scene.render(&mut self.main, aabb_program);
 
@@ -106,6 +101,30 @@ impl Renderer {
             self.int.unbind_textures();
             self.post.unbind();
             self.screen.vao.unbind();
+        }
+    }
+
+    #[inline]
+    pub fn resize(&mut self, w: i32, h: i32) {
+        self.front = FramebufferBuilder::new(w, h)
+            .with_depth()
+            .with_stencil()
+            .with_samples(4)
+            .build()
+            .unwrap();
+
+        self.int = FramebufferBuilder::new(w, h).build().unwrap();
+    }
+}
+
+impl ImRender for Renderer {
+    fn render(&mut self, ui: &imgui::Ui) {
+        if imgui::CollapsingHeader::new(imgui::im_str!("Renderer")).build(ui) {
+            if imgui::ColorPicker::new(imgui::im_str!("BG Color"), &mut self.bg_col).build(ui) {
+                unsafe {
+                    gl::ClearColor(self.bg_col[0], self.bg_col[1], self.bg_col[2], 1.0);
+                }
+            }
         }
     }
 }

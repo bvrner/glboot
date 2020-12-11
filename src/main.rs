@@ -7,10 +7,10 @@ use std::{cell::RefCell, rc::Rc};
 use glboot::{
     core::{arcball::ArcBall, camera::Camera, window::Window},
     ogl::{
-        buffers::{FramebufferBuilder, VertexArray, VertexBuffer},
+        buffers::{VertexArray, VertexBuffer},
         program::ShaderProgram,
         renderer::Renderer,
-        shaders::ShaderError, // texture::Texture,
+        // shaders::ShaderError, // texture::Texture,
     },
     scene::Scene,
 };
@@ -42,8 +42,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut pprogram = ShaderProgram::from_file(format!("{}/shaders/post/flat_post.glsl", root))?;
     pprogram.set_uniform("screenTex", 0);
 
-    let mut renderer = Renderer::create(1366, 720, program, pprogram);
     let mut imgui = glboot::ImGUI::new(&mut window);
+
+    let renderer = Renderer::create(1366, 720, program, pprogram);
+    let renderer = RefCell::new(renderer);
+    let renderer = Rc::new(renderer);
+
+    imgui.push_render(renderer.clone());
 
     let scene = Scene::load(m_path)?;
     let scene = RefCell::new(scene);
@@ -51,7 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     imgui.push_render(scene.clone());
 
-    let gui_state = glboot::ImGuiState::default();
+    // let gui_state = glboot::ImGuiState::default();
     let camera = Camera::new(Point3::new(0.0, 0.0, 15.0), Vector3::new(0.0, 0.0, -1.0));
     let camera = Rc::new(RefCell::new(camera));
 
@@ -69,7 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     quad_vao.add_buffer(&quad_vbo, &layout);
 
     {
-        // let mut program = program.borrow_mut();
+        let mut renderer = renderer.borrow_mut();
         renderer
             .main
             .set_uniform("projection", camera.borrow().get_projection(1366.0, 713.0));
@@ -84,20 +89,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut arc = ArcBall::new(1366.0, 713.0);
     let events = window.events.take().unwrap();
-    let mut last_frame = 0.0;
+    // let mut last_frame = 0.0;
 
     while !window.should_close() {
-        let current_frame = window.glfw.get_time() as f32;
-        let delta_time = current_frame - last_frame;
-        last_frame = current_frame;
+        // let current_frame = window.glfw.get_time() as f32;
+        // let delta_time = current_frame - last_frame;
+        // last_frame = current_frame;
 
-        renderer.render(&scene.borrow(), &mut aabb_program);
+        aabb_program.set_uniform("view", camera.borrow().get_matrix());
+        aabb_program.set_uniform(
+            "proj",
+            camera
+                .borrow()
+                .get_projection(window.width as f32, window.height as f32),
+        );
+
+        renderer
+            .borrow_mut()
+            .render(&scene.borrow(), &mut aabb_program);
 
         imgui.draw(&mut window);
 
         {
             // let mut program = program.borrow_mut();
-            renderer.main.set_uniform(
+            renderer.borrow_mut().main.set_uniform(
                 "projection",
                 camera
                     .borrow()
@@ -138,21 +153,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         // model.rotation = rotation;
                     }
                 }
-                // glfw::WindowEvent::FramebufferSize(w, h) => {
-                //     window.width = w as u32;
-                //     window.height = h as u32;
-
-                //     arc.update(w as f32, h as f32);
-
-                //     let proj = cgmath::perspective(
-                //         cgmath::Deg(gui_state.cam_slider),
-                //         w as f32 / h as f32,
-                //         0.1_f32,
-                //         100f32,
-                //     );
-
-                //     program.set_uniform("projection", proj);
-                // }
+                glfw::WindowEvent::FramebufferSize(w, h) => {
+                    renderer.borrow_mut().resize(w as i32, h as i32);
+                }
                 _ => {}
             }
         }
@@ -208,17 +211,17 @@ fn setup() -> Window {
 //     }
 // }
 
-fn load_post_shaders() -> Result<Vec<ShaderProgram>, ShaderError> {
-    let root = format!("{}/assets/shaders/post", env!("CARGO_MANIFEST_DIR"));
+// fn load_post_shaders() -> Result<Vec<ShaderProgram>, ShaderError> {
+//     let root = format!("{}/assets/shaders/post", env!("CARGO_MANIFEST_DIR"));
 
-    Ok(vec![
-        ShaderProgram::from_file(format!("{}/flat_post.glsl", root))?,
-        ShaderProgram::from_file(format!("{}/negative.glsl", root))?,
-        ShaderProgram::from_file(format!("{}/bw.glsl", root))?,
-        ShaderProgram::from_file(format!("{}/kernel.glsl", root))?,
-        ShaderProgram::from_file(format!("{}/sobel.glsl", root))?,
-    ])
-}
+//     Ok(vec![
+//         ShaderProgram::from_file(format!("{}/flat_post.glsl", root))?,
+//         ShaderProgram::from_file(format!("{}/negative.glsl", root))?,
+//         ShaderProgram::from_file(format!("{}/bw.glsl", root))?,
+//         ShaderProgram::from_file(format!("{}/kernel.glsl", root))?,
+//         ShaderProgram::from_file(format!("{}/sobel.glsl", root))?,
+//     ])
+// }
 extern "system" fn callback(
     source: GLenum,
     gltype: GLenum,

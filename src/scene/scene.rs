@@ -223,7 +223,7 @@ where
 
 fn process_node(buffers: &[gltf::buffer::Data], node: &gltf::Node) -> Node {
     let mesh = node.mesh().map(|m| process_mesh(&buffers, &m));
-    let transform = node.transform().matrix().into();
+    let transform = node.transform();
     let children = node.children().map(|child| child.index()).collect();
 
     Node::new(mesh, transform, children)

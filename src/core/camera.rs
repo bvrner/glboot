@@ -64,7 +64,9 @@ impl ImRender for Camera {
                 self.pos = front_arr.into();
             }
 
-            imgui::Slider::new(imgui::im_str!("FOV"), 0.1..=90.0).build(&ui, &mut self.fov);
+            imgui::Slider::new(imgui::im_str!("FOV"))
+                .range(0.1..=90.0)
+                .build(&ui, &mut self.fov);
         }
     }
 }

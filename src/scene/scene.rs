@@ -38,7 +38,8 @@ impl ImRender for Scene {
             imgui::TreeNode::new(imgui::im_str!("m1"))
                 .label(imgui::im_str!("Model"))
                 .build(ui, || {
-                    if imgui::Slider::new(imgui::im_str!("Scale"), 0.0001..=1.0)
+                    if imgui::Slider::new(imgui::im_str!("Scale"))
+                        .range(0.0001..=1.0)
                         .build(&ui, &mut self.scale)
                     {
                         if self.scale < 0.0001 {
@@ -46,9 +47,14 @@ impl ImRender for Scene {
                         }
                     }
 
-                    if ui.small_button(imgui::im_str!("Reset Scale")) {
+                    let bid = ui.push_id("Reset");
+
+                    ui.same_line(0.0);
+                    if ui.small_button(imgui::im_str!("Reset")) {
                         self.scale = 1.0;
                     }
+
+                    bid.pop(ui);
 
                     let mut vec = self.translation.into();
                     if imgui::InputFloat3::new(ui, imgui::im_str!("Translation"), &mut vec).build()
@@ -56,7 +62,8 @@ impl ImRender for Scene {
                         self.translation = vec.into();
                     }
 
-                    if ui.small_button(imgui::im_str!("Reset Trans.")) {
+                    ui.same_line(0.0);
+                    if ui.small_button(imgui::im_str!("Reset")) {
                         self.translation = Vector3::new(0.0, 0.0, 0.0);
                     }
 

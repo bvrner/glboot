@@ -39,6 +39,13 @@ impl Node {
         }
     }
 
+    pub fn update(&mut self) {
+        let transform = Matrix4::from_translation(self.translation)
+            * Matrix4::from(self.rotation)
+            * Matrix4::from_nonuniform_scale(self.scale.x, self.scale.y, self.scale.z);
+        self.transform = transform;
+    }
+
     pub fn gen_aabb(&self, nodes: &[Node], transform: Matrix4<f32>) -> Aabb {
         let mut this_aabb = if let Some(ref mesh) = self.mesh {
             mesh.aabb.transform(&transform)

@@ -1,3 +1,4 @@
+mod animations;
 mod mesh;
 mod node;
 mod scene;

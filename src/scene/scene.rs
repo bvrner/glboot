@@ -6,7 +6,7 @@ use crate::{
 use cgmath::{prelude::*, Matrix4, Quaternion, Vector3};
 use thiserror::Error;
 
-use super::{Mesh, Node, Primitive, Vertice};
+use super::{animations::Animation, Mesh, Node, Primitive, Vertice};
 
 use rayon::prelude::*;
 use std::convert::TryFrom;
@@ -19,6 +19,7 @@ pub struct Scene {
     roots: Vec<usize>, // indices of the roots
     textures: Vec<Texture>,
     materials: Vec<Material>,
+    animations: Vec<Animation>,
     pub aabb: Aabb,
     pub scale: f32,
     pub rotation: Quaternion<f32>,
@@ -38,45 +39,59 @@ impl ImRender for Scene {
             imgui::TreeNode::new(imgui::im_str!("m1"))
                 .label(imgui::im_str!("Model"))
                 .build(ui, || {
-                    if imgui::Slider::new(imgui::im_str!("Scale"))
-                        .range(0.0001..=1.0)
-                        .build(&ui, &mut self.scale)
+                    if let Some(t_node) = imgui::TreeNode::new(imgui::im_str!("m1.1"))
+                        .label(imgui::im_str!("Transformations"))
+                        .push(ui)
                     {
-                        if self.scale < 0.0001 {
-                            self.scale = 0.1
+                        if imgui::Slider::new(imgui::im_str!("Scale"))
+                            .range(0.0001..=1.0)
+                            .build(&ui, &mut self.scale)
+                        {
+                            if self.scale < 0.0001 {
+                                self.scale = 0.1
+                            }
                         }
+
+                        let bid = ui.push_id("Reset");
+
+                        ui.same_line(0.0);
+                        if ui.small_button(imgui::im_str!("Reset")) {
+                            self.scale = 1.0;
+                        }
+
+                        bid.pop(ui);
+
+                        let mut vec = self.translation.into();
+                        if imgui::InputFloat3::new(ui, imgui::im_str!("Translation"), &mut vec)
+                            .build()
+                        {
+                            self.translation = vec.into();
+                        }
+
+                        ui.same_line(0.0);
+                        if ui.small_button(imgui::im_str!("Reset")) {
+                            self.translation = Vector3::new(0.0, 0.0, 0.0);
+                        }
+
+                        // let mut vec = self.rotation.into();
+                        // if imgui::InputFloat4::new(ui, imgui::im_str!("Rotation"), &mut vec).build() {
+                        //     self.rotation = vec.into();
+                        // }
+
+                        // if ui.small_button(imgui::im_str!("Reset")) {
+                        //     self.rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
+                        // }
+                        //
+                        t_node.pop(ui);
                     }
 
-                    let bid = ui.push_id("Reset");
-
-                    ui.same_line(0.0);
-                    if ui.small_button(imgui::im_str!("Reset")) {
-                        self.scale = 1.0;
-                    }
-
-                    bid.pop(ui);
-
-                    let mut vec = self.translation.into();
-                    if imgui::InputFloat3::new(ui, imgui::im_str!("Translation"), &mut vec).build()
+                    if let Some(o_node) = imgui::TreeNode::new(imgui::im_str!("m1.2"))
+                        .label(imgui::im_str!("Other"))
+                        .push(ui)
                     {
-                        self.translation = vec.into();
+                        ui.checkbox(imgui::im_str!("AABB"), &mut self.draw_aabb);
+                        o_node.pop(ui)
                     }
-
-                    ui.same_line(0.0);
-                    if ui.small_button(imgui::im_str!("Reset")) {
-                        self.translation = Vector3::new(0.0, 0.0, 0.0);
-                    }
-
-                    // let mut vec = self.rotation.into();
-                    // if imgui::InputFloat4::new(ui, imgui::im_str!("Rotation"), &mut vec).build() {
-                    //     self.rotation = vec.into();
-                    // }
-
-                    // if ui.small_button(imgui::im_str!("Reset")) {
-                    //     self.rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
-                    // }
-
-                    ui.checkbox(imgui::im_str!("AABB"), &mut self.draw_aabb);
                 });
         }
     }
@@ -85,6 +100,12 @@ impl ImRender for Scene {
 impl Scene {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, LoaderError> {
         load_gltf(path)
+    }
+
+    pub fn update(&mut self, time: f32) {
+        for anim in self.animations.iter() {
+            anim.animate(time, &mut self.nodes);
+        }
     }
 
     pub fn render(&self, shader: &mut ShaderProgram, aabb_shader: &mut ShaderProgram) {
@@ -214,6 +235,10 @@ where
         nodes,
         textures,
         materials,
+        animations: document
+            .animations()
+            .map(|anim| Animation::new(anim, &buffers))
+            .collect(),
         scale: 1.0,
         rotation: Quaternion::new(1.0, 0.0, 0.0, 0.0),
         translation: Vector3::new(0.0, 0.0, 0.0),

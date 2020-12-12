@@ -23,9 +23,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let shader_path = format!("{}/shaders/flattex.glsl", root);
     // let shader_path = format!("{}/shaders/procedural/bricks.glsl", root);
-    let m_path = format!("{}/models/matilda/scene.gltf", root);
+    // let m_path = format!("{}/models/matilda/scene.gltf", root);
     // let m_path = format!("{}/models/back/scene.gltf", root);
-    // let m_path = format!("{}/models/tests/BoxTextured.gltf", root);
+    let m_path = format!("{}/models/tests/AnimatedTriangle.gltf", root);
     // let m_path = format!("{}/models/dragon.glb", root);
 
     let mut window = setup();
@@ -89,12 +89,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut arc = ArcBall::new(1366.0, 713.0);
     let events = window.events.take().unwrap();
-    // let mut last_frame = 0.0;
+
+    // let time_delta = 1000.0 / 30.0;
+    // let mut time_accum = 0.0;
 
     while !window.should_close() {
-        // let current_frame = window.glfw.get_time() as f32;
-        // let delta_time = current_frame - last_frame;
-        // last_frame = current_frame;
+        // let mut this_time = 0.0;
+        // let start = window.glfw.get_time() as f32;
+
+        // while time_accum >= time_delta {
+        //     time_accum -= time_delta;
+        //     this_time += time_delta;
+        // }
+        // time_accum += window.glfw.get_time() as f32 - start;
 
         aabb_program.set_uniform("view", camera.borrow().get_matrix());
         aabb_program.set_uniform(
@@ -103,7 +110,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .borrow()
                 .get_projection(window.width as f32, window.height as f32),
         );
-
+        let this_time = window.glfw.get_time() as f32;
+        scene.borrow_mut().update(this_time);
         renderer
             .borrow_mut()
             .render(&scene.borrow(), &mut aabb_program);

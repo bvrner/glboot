@@ -103,7 +103,7 @@ impl Scene {
     }
 
     pub fn update(&mut self, time: f32) {
-        for anim in self.animations.iter() {
+        for anim in self.animations.iter_mut() {
             anim.animate(time, &mut self.nodes);
         }
     }

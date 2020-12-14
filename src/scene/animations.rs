@@ -19,26 +19,61 @@ struct Channel {
 
 #[derive(Debug, Copy, Clone, Default)]
 struct TimeData {
-    start: usize,  // first frame index
-    end: usize,    // last frame inde
-    end_time: f32, // last time frame
+    time_accum: f32,
+    frame_dur: f32,
 
     curr_time: f32,
+    old_time: f32,
 
-    curr_frame: usize, // current frame index
-    next_frame: usize, // next frame index
+    end_time: f32,
+    start_time: f32,
+
+    prev_index: usize,
+    next_index: usize,
+    end_index: usize,
+    interp: f32,
+}
+
+pub fn clamp(val: usize, min: usize, max: usize) -> usize {
+    assert!(min <= max);
+    let mut x = val;
+    if x < min {
+        x = min;
+    }
+    if x > max {
+        x = max;
+    }
+    x
 }
 
 impl TimeData {
-    fn update(&mut self, time: f32) {
-        self.curr_time += time;
+    fn update(&mut self, time: f32, inputs: &[f32]) {
+        self.time_accum = time;
+        self.curr_time = (self.time_accum % self.end_time).max(self.start_time);
 
-        if self.curr_time > self.end_time {
-            self.curr_time -= self.end_time;
-
-            self.curr_frame = self.end;
-            self.next_frame = self.start;
+        if self.old_time > self.curr_time {
+            self.prev_index = 0;
         }
+
+        self.old_time = self.curr_time;
+
+        // Find next keyframe: min{ t of input | t > prevKey }
+        let mut next_key = 0;
+        for i in self.prev_index..inputs.len() {
+            if self.curr_time <= inputs[i] {
+                next_key = clamp(i, 1, inputs.len() - 1);
+                break;
+            }
+        }
+
+        self.prev_index = clamp(next_key - 1, 0, next_key);
+
+        let delta = inputs[next_key] - inputs[self.prev_index];
+
+        // Normalize t: [t0, t1] -> [0, 1]
+        self.interp = (self.curr_time - inputs[self.prev_index]) / delta;
+        self.next_index = next_key;
+        // self.curr_time += time;
     }
 }
 
@@ -77,39 +112,29 @@ impl Animation {
 
     pub fn animate(&mut self, time_: f32, nodes: &mut [super::Node]) {
         for channel in self.channels.iter_mut() {
-            let time = &mut channel.time_data;
-            time.update(time_);
-
-            let prev_time = channel.input[time.curr_frame];
-            let next_time = channel.input[time.next_frame];
-            let interpolation = (time.curr_time - prev_time) / (next_time - prev_time);
+            channel.time_data.update(time_, &channel.input);
+            let time = &channel.time_data;
 
             match channel.path {
                 gltf::animation::Property::Rotation => {
-                    let prev_quat = channel.output.get_rotation(time.curr_frame);
-                    let next_quat = channel.output.get_rotation(time.next_frame);
+                    let prev_quat = channel.output.get_rotation(time.prev_index);
+                    let next_quat = channel.output.get_rotation(time.next_index);
+                    // dbg!(*time, interpolation, &channel.input);
+                    dbg!(*time);
+                    // dbg!(interpolation);
 
-                    nodes[channel.target].rotation = prev_quat.slerp(next_quat, interpolation);
+                    nodes[channel.target].rotation = prev_quat.slerp(next_quat, time.interp);
+                    // dbg!(&nodes[channel.target].rotation);
                 }
                 gltf::animation::Property::Translation => {
-                    let prev_trans = channel.output.get_translation(time.curr_frame);
-                    let next_trans = channel.output.get_translation(time.next_frame);
-                    dbg!(*time);
+                    let prev_trans = channel.output.get_translation(time.prev_index);
+                    let next_trans = channel.output.get_translation(time.next_index);
 
-                    nodes[channel.target].translation = prev_trans.lerp(next_trans, interpolation);
+                    nodes[channel.target].translation = prev_trans.lerp(next_trans, time.interp);
                 }
-                _ => unimplemented!(),
+                _ => {}
             }
             nodes[channel.target].update();
-
-            if time.curr_time > channel.input[time.next_frame] {
-                time.curr_frame = time.next_frame;
-                time.next_frame += 1;
-
-                if time.next_frame > time.end {
-                    time.next_frame = time.start;
-                }
-            }
         }
     }
 }
@@ -122,11 +147,18 @@ impl Channel {
         let path = channel.target().property();
         let input: Vec<f32> = reader.read_inputs().unwrap().collect();
         let output = Output::from(reader.read_outputs().unwrap());
-        let mut time_data = TimeData::default();
-
-        time_data.end = input.len() - 1;
-        time_data.end_time = *input.last().unwrap();
-        time_data.next_frame = 1;
+        let time_data = TimeData {
+            interp: 0.0,
+            time_accum: 0.0,
+            frame_dur: input[1] - input[0],
+            curr_time: input[0],
+            old_time: 0.0,
+            end_time: input[input.len() - 1],
+            start_time: input[0],
+            prev_index: 0,
+            next_index: 1,
+            end_index: input.len() - 1,
+        };
 
         Self {
             target,

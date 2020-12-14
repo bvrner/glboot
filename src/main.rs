@@ -25,6 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let shader_path = format!("{}/shaders/procedural/bricks.glsl", root);
     // let m_path = format!("{}/models/matilda/scene.gltf", root);
     // let m_path = format!("{}/models/back/scene.gltf", root);
+    // let m_path = format!("{}/models/tests/BoxAnimated.gltf", root);
     let m_path = format!("{}/models/tests/AnimatedTriangle.gltf", root);
     // let m_path = format!("{}/models/dragon.glb", root);
 
@@ -90,19 +91,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut arc = ArcBall::new(1366.0, 713.0);
     let events = window.events.take().unwrap();
 
-    // let time_delta = 1000.0 / 30.0;
-    // let mut time_accum = 0.0;
+    let fps = 1.0 / 60.0;
+    let mut last_time = window.glfw.get_time() as f32;
+    // let timer = last_time;
 
+    let mut delta = 0.0;
+
+    let time = window.glfw.get_time() as f32;
     while !window.should_close() {
-        // let mut this_time = 0.0;
-        // let start = window.glfw.get_time() as f32;
+        let now = window.glfw.get_time() as f32;
+        delta += (now - last_time) / fps;
 
-        // while time_accum >= time_delta {
-        //     time_accum -= time_delta;
-        //     this_time += time_delta;
-        // }
-        // time_accum += window.glfw.get_time() as f32 - start;
-
+        if delta >= 1.0 {
+            // scene.borrow_mut().update(now - last_time);
+        }
+        last_time = now;
+        scene
+            .borrow_mut()
+            .update(window.glfw.get_time() as f32 - time);
         aabb_program.set_uniform("view", camera.borrow().get_matrix());
         aabb_program.set_uniform(
             "proj",
@@ -110,8 +116,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .borrow()
                 .get_projection(window.width as f32, window.height as f32),
         );
-        let this_time = window.glfw.get_time() as f32;
-        scene.borrow_mut().update(this_time);
+        // let this_time = window.glfw.get_time() as f32;
+        // last_time = this_time;
         renderer
             .borrow_mut()
             .render(&scene.borrow(), &mut aabb_program);
@@ -129,6 +135,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         window.update();
+
+        // if window.glfw.get_time() as f32 - timer > 1.0 {
+        //     timer += 1.0
+        // }
 
         for (_, event) in glfw::flush_messages(&events) {
             imgui.handle_event(&event);

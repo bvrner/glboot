@@ -1,188 +1,291 @@
-use cgmath::{Quaternion, Vector3, VectorSpace};
-use gltf::animation::util::ReadOutputs;
+use crate::slerp;
+use cgmath::{prelude::*, Quaternion, Vector3, VectorSpace};
+use gltf::animation::{util::ReadOutputs, Channel as gltfChannel, Interpolation, Property};
 
 #[derive(Debug, Clone)]
 pub struct Animation {
-    channels: Vec<Channel>,
+    rotations: Vec<Channel<Quaternion<f32>>>,
+    translations: Vec<Channel<Vector3<f32>>>,
+    scales: Vec<Channel<Vector3<f32>>>,
 }
 
 #[derive(Debug, Clone)]
-struct Channel {
+struct Channel<T> {
     target: usize,
-    path: gltf::animation::Property,
+    path: Property,
     input: Vec<f32>,
-    output: Output,
-    interpolation: gltf::animation::Interpolation,
+    output: Vec<T>,
+    interpolation: Interpolation,
 
-    time_data: TimeData,
+    frame: FrameData,
 }
 
 #[derive(Debug, Copy, Clone, Default)]
-struct TimeData {
-    time_accum: f32,
-    frame_dur: f32,
+struct FrameData {
+    time_accum: f32, // total time since the animation started
+    curr_time: f32,  // time relative to the beginning and end of the animation
 
-    curr_time: f32,
-    old_time: f32,
+    end_time: f32,   // last frame time
+    start_time: f32, // first frame time
 
-    end_time: f32,
-    start_time: f32,
+    prev_index: usize, // index of the last frame
+    next_index: usize, // index of the next frame
 
-    prev_index: usize,
-    next_index: usize,
-    end_index: usize,
-    interp: f32,
+    interp: f32, // interpolation factor of the current frame
 }
 
-pub fn clamp(val: usize, min: usize, max: usize) -> usize {
-    assert!(min <= max);
-    let mut x = val;
-    if x < min {
-        x = min;
-    }
-    if x > max {
-        x = max;
-    }
-    x
-}
-
-impl TimeData {
+impl FrameData {
     fn update(&mut self, time: f32, inputs: &[f32]) {
-        self.time_accum = time;
+        self.time_accum += time;
         self.curr_time = (self.time_accum % self.end_time).max(self.start_time);
 
-        if self.old_time > self.curr_time {
-            self.prev_index = 0;
-        }
-
-        self.old_time = self.curr_time;
-
-        // Find next keyframe: min{ t of input | t > prevKey }
-        let mut next_key = 0;
-        for i in self.prev_index..inputs.len() {
-            if self.curr_time <= inputs[i] {
-                next_key = clamp(i, 1, inputs.len() - 1);
+        let mut index = 0;
+        for (i, win) in inputs.windows(2).enumerate() {
+            let previous = win[0];
+            let next = win[1];
+            if self.curr_time >= previous && self.curr_time < next {
+                index = i;
                 break;
             }
         }
 
-        self.prev_index = clamp(next_key - 1, 0, next_key);
+        let previous_time = inputs[index];
+        let next_time = inputs[index + 1];
+        let delta = next_time - previous_time;
+        let from_start = self.curr_time - previous_time;
 
-        let delta = inputs[next_key] - inputs[self.prev_index];
-
-        // Normalize t: [t0, t1] -> [0, 1]
-        self.interp = (self.curr_time - inputs[self.prev_index]) / delta;
-        self.next_index = next_key;
-        // self.curr_time += time;
-    }
-}
-
-#[derive(Debug, Clone)]
-enum Output {
-    Translation(Vec<Vector3<f32>>),
-    Rotation(Vec<Quaternion<f32>>),
-    Scale(Vec<Vector3<f32>>),
-    // Morph,
-}
-
-impl Output {
-    #[track_caller]
-    fn get_rotation(&self, ind: usize) -> Quaternion<f32> {
-        match self {
-            Output::Rotation(q) => q[ind],
-            _ => panic!(),
-        }
-    }
-
-    #[track_caller]
-    fn get_translation(&self, ind: usize) -> Vector3<f32> {
-        match self {
-            Output::Translation(t) => t[ind],
-            _ => panic!(),
-        }
+        self.prev_index = index;
+        self.next_index = index + 1;
+        self.interp = from_start / delta
     }
 }
 
 impl Animation {
     pub fn new(anim: gltf::Animation, buf: &[gltf::buffer::Data]) -> Self {
         Self {
-            channels: anim.channels().map(|ch| Channel::new(ch, buf)).collect(),
+            rotations: anim
+                .channels()
+                .filter(|ch| ch.target().property() == Property::Rotation)
+                .map(|ch| -> Channel<Quaternion<f32>> {
+                    Channel::<Quaternion<f32>>::new_rotation(ch, buf)
+                })
+                .collect(),
+            translations: anim
+                .channels()
+                .filter(|ch| ch.target().property() == Property::Translation)
+                .map(|ch| Channel::<Vector3<f32>>::new_trans(ch, buf))
+                .collect(),
+            scales: anim
+                .channels()
+                .filter(|ch| ch.target().property() == Property::Scale)
+                .map(|ch| Channel::<Vector3<f32>>::new_scale(ch, buf))
+                .collect(),
         }
     }
 
-    pub fn animate(&mut self, time_: f32, nodes: &mut [super::Node]) {
-        for channel in self.channels.iter_mut() {
-            channel.time_data.update(time_, &channel.input);
-            let time = &channel.time_data;
+    pub fn animate(&mut self, time: f32, nodes: &mut [super::Node]) {
+        self.translations
+            .iter_mut()
+            .map(|ch| ch.animate(time))
+            .for_each(|(index, t)| {
+                nodes[index].translation = t;
+                nodes[index].update()
+            });
+        self.scales
+            .iter_mut()
+            .map(|ch| ch.animate(time))
+            .for_each(|(index, t)| {
+                nodes[index].scale = t;
+                nodes[index].update()
+            });
+        self.rotations
+            .iter_mut()
+            .map(|ch| ch.animate(time))
+            .for_each(|(index, t)| {
+                nodes[index].rotation = t;
+                nodes[index].update()
+            });
+    }
+}
 
-            match channel.path {
-                gltf::animation::Property::Rotation => {
-                    let prev_quat = channel.output.get_rotation(time.prev_index);
-                    let next_quat = channel.output.get_rotation(time.next_index);
-                    // dbg!(*time, interpolation, &channel.input);
-                    dbg!(*time);
-                    // dbg!(interpolation);
+impl<T: Interpolate + Copy> Channel<T> {
+    fn animate(&mut self, t: f32) -> (usize, T) {
+        self.frame.update(t, &self.input);
 
-                    nodes[channel.target].rotation = prev_quat.slerp(next_quat, time.interp);
-                    // dbg!(&nodes[channel.target].rotation);
-                }
-                gltf::animation::Property::Translation => {
-                    let prev_trans = channel.output.get_translation(time.prev_index);
-                    let next_trans = channel.output.get_translation(time.next_index);
+        let i = self.frame.prev_index;
+        let j = self.frame.next_index;
 
-                    nodes[channel.target].translation = prev_trans.lerp(next_trans, time.interp);
-                }
-                _ => {}
+        match self.interpolation {
+            Interpolation::Linear => {
+                let transform = self.output[i].linear(self.output[j], self.frame.interp);
+                (self.target, transform)
             }
-            nodes[channel.target].update();
+            Interpolation::CubicSpline => {
+                let previous_values = [
+                    self.output[i * 3],
+                    self.output[i * 3 + 1],
+                    self.output[i * 3 + 2],
+                ];
+                let next_values = [
+                    self.output[i * 3 + 3],
+                    self.output[i * 3 + 4],
+                    self.output[i * 3 + 5],
+                ];
+                let t = Interpolate::cubic(
+                    previous_values,
+                    self.input[i],
+                    next_values,
+                    self.input[j],
+                    self.frame.interp,
+                );
+
+                (self.target, t)
+            }
+            Interpolation::Step => (self.target, self.output[i]),
         }
     }
 }
 
-impl Channel {
-    fn new(channel: gltf::animation::Channel, buf: &[gltf::buffer::Data]) -> Self {
-        let reader = channel.reader(|buffer| Some(&buf[buffer.index()]));
+impl<T> Channel<T> {
+    fn new_rotation(ch: gltfChannel, buf: &[gltf::buffer::Data]) -> Channel<Quaternion<f32>> {
+        let reader = ch.reader(|buffer| Some(&buf[buffer.index()]));
+        let target = ch.target().node().index();
+        let path = ch.target().property();
 
-        let target = channel.target().node().index();
-        let path = channel.target().property();
         let input: Vec<f32> = reader.read_inputs().unwrap().collect();
-        let output = Output::from(reader.read_outputs().unwrap());
-        let time_data = TimeData {
+        let output: Vec<Quaternion<f32>> =
+            reader.read_outputs().map_or(vec![], |output| match output {
+                ReadOutputs::Rotations(r) => r
+                    .into_f32()
+                    .map(|arr| Quaternion::new(arr[3], arr[0], arr[1], arr[2]))
+                    .collect(),
+                _ => vec![],
+            });
+        let frame = FrameData {
             interp: 0.0,
             time_accum: 0.0,
-            frame_dur: input[1] - input[0],
             curr_time: input[0],
-            old_time: 0.0,
             end_time: input[input.len() - 1],
             start_time: input[0],
             prev_index: 0,
             next_index: 1,
-            end_index: input.len() - 1,
         };
 
-        Self {
+        Channel {
             target,
             path,
             input,
             output,
-            time_data,
-            interpolation: channel.sampler().interpolation(),
+            interpolation: ch.sampler().interpolation(),
+            frame,
+        }
+    }
+    fn new_scale(ch: gltfChannel, buf: &[gltf::buffer::Data]) -> Channel<Vector3<f32>> {
+        let reader = ch.reader(|buffer| Some(&buf[buffer.index()]));
+        let target = ch.target().node().index();
+        let path = ch.target().property();
+
+        let input: Vec<f32> = reader.read_inputs().unwrap().collect();
+        let output: Vec<Vector3<f32>> =
+            reader.read_outputs().map_or(vec![], |output| match output {
+                ReadOutputs::Scales(s) => s.map(Vector3::from).collect(),
+                _ => vec![],
+            });
+        let frame = FrameData {
+            interp: 0.0,
+            time_accum: 0.0,
+            //            frame_dur: input[1] - input[0],
+            curr_time: input[0],
+            //           old_time: 0.0,
+            end_time: input[input.len() - 1],
+            start_time: input[0],
+            prev_index: 0,
+            next_index: 1,
+            //         end_index: input.len() - 1,
+        };
+
+        Channel {
+            target,
+            path,
+            input,
+            output,
+            interpolation: ch.sampler().interpolation(),
+            frame,
+        }
+    }
+    fn new_trans(ch: gltfChannel, buf: &[gltf::buffer::Data]) -> Channel<Vector3<f32>> {
+        let reader = ch.reader(|buffer| Some(&buf[buffer.index()]));
+        let target = ch.target().node().index();
+        let path = ch.target().property();
+
+        let input: Vec<f32> = reader.read_inputs().unwrap().collect();
+        let output: Vec<Vector3<f32>> =
+            reader.read_outputs().map_or(vec![], |output| match output {
+                ReadOutputs::Translations(ts) => ts.map(Vector3::from).collect(),
+                _ => vec![],
+            });
+        let frame = FrameData {
+            interp: 0.0,
+            time_accum: 0.0,
+            //            frame_dur: input[1] - input[0],
+            curr_time: input[0],
+            //           old_time: 0.0,
+            end_time: input[input.len() - 1],
+            start_time: input[0],
+            prev_index: 0,
+            next_index: 1,
+            //         end_index: input.len() - 1,
+        };
+
+        Channel {
+            target,
+            path,
+            input,
+            output,
+            interpolation: ch.sampler().interpolation(),
+            frame,
         }
     }
 }
 
-impl<'a> From<ReadOutputs<'a>> for Output {
-    fn from(out: ReadOutputs) -> Self {
-        match out {
-            ReadOutputs::Translations(t) => Self::Translation(t.map(Into::into).collect()),
-            ReadOutputs::Rotations(r) => {
-                let quat = r
-                    .into_f32()
-                    .map(|r| Quaternion::new(r[3], r[0], r[1], r[2]));
-                Self::Rotation(quat.collect())
-            }
-            ReadOutputs::Scales(s) => Self::Scale(s.map(Into::into).collect()),
-            ReadOutputs::MorphTargetWeights(_) => unimplemented!(),
-        }
+trait Interpolate: Sized {
+    fn linear(&self, other: Self, t: f32) -> Self;
+    fn cubic(source: [Self; 3], stime: f32, target: [Self; 3], ttime: f32, t: f32) -> Self;
+}
+
+impl Interpolate for Vector3<f32> {
+    fn linear(&self, other: Self, t: f32) -> Self {
+        self.lerp(other, t)
+    }
+
+    fn cubic(source: [Self; 3], stime: f32, target: [Self; 3], ttime: f32, t: f32) -> Self {
+        let p0 = source[1];
+        let m0 = (ttime - stime) * source[2];
+        let p1 = target[1];
+        let m1 = (ttime - stime) * target[0];
+
+        (2.0 * t * t * t - 3.0 * t * t + 1.0) * p0
+            + (t * t * t - 2.0 * t * t + t) * m0
+            + (-2.0 * t * t * t + 3.0 * t * t) * p1
+            + (t * t * t - t * t) * m1
+    }
+}
+
+impl Interpolate for Quaternion<f32> {
+    fn linear(&self, other: Self, t: f32) -> Self {
+        slerp(*self, other, t)
+    }
+
+    fn cubic(source: [Self; 3], stime: f32, target: [Self; 3], ttime: f32, t: f32) -> Self {
+        let p0 = source[1];
+        let m0 = (ttime - stime) * source[2];
+        let p1 = target[1];
+        let m1 = (ttime - stime) * target[0];
+
+        let ret = (2.0 * t * t * t - 3.0 * t * t + 1.0) * p0
+            + (t * t * t - 2.0 * t * t + t) * m0
+            + (-2.0 * t * t * t + 3.0 * t * t) * p1
+            + (t * t * t - t * t) * m1;
+        ret.normalize()
     }
 }

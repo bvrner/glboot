@@ -13,6 +13,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Mesh {
     primitives: Vec<Primitive>,
+    pub name: Option<String>,
     pub aabb: Aabb,
 }
 
@@ -37,14 +38,15 @@ pub struct Vertice {
 }
 
 impl Mesh {
-    pub fn new(prim: Vec<Primitive>) -> Self {
+    pub fn new(prim: Vec<Primitive>, name: Option<String>) -> Self {
         let aabb = prim
             .iter()
             .fold(Aabb::default(), |bound, prim| bound.surrounds(&prim.aabb));
-
+        // dbg!(&name);
         Self {
             primitives: prim,
             aabb,
+            name,
         }
     }
 
@@ -55,7 +57,10 @@ impl Mesh {
         transform: Matrix4<f32>,
     ) {
         for prim in self.primitives.iter() {
-            prim.draw(shader, materials, transform);
+            prim.draw(
+                shader, materials, transform,
+                // self.name == Some(String::from("Plane.001")),
+            );
         }
     }
 }
@@ -66,6 +71,7 @@ impl Primitive {
         shader: &mut ShaderProgram,
         materials: &[Material],
         transform: Matrix4<f32>,
+        // dbg: bool,
     ) {
         if let Some(mat_index) = self.material {
             let material = &materials[mat_index];
@@ -79,6 +85,12 @@ impl Primitive {
             } else {
                 shader.set_uniform("material.has_base_tex", 0);
             }
+        } else {
+            // shader.set_uniform("material.base_color", material.base_color);
+            shader.set_uniform("material.has_base_color", 0);
+
+            // shader.set_uniform("material.base_tex", base_tex_index as i32);
+            shader.set_uniform("material.has_base_tex", 0);
         }
 
         shader.set_uniform("model", transform);

@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use super::{animations::Animation, Mesh, Node, Primitive, Vertice};
 
-use rayon::prelude::*;
+// use rayon::prelude::*;
 use std::convert::TryFrom;
 use std::path::Path;
 
@@ -103,6 +103,8 @@ impl Scene {
     }
 
     pub fn update(&mut self, time: f32) {
+        // TODO change animation during runtime
+        // self.animations[0].animate(time, &mut self.nodes);
         for anim in self.animations.iter_mut() {
             anim.animate(time, &mut self.nodes);
         }
@@ -112,6 +114,7 @@ impl Scene {
         shader.bind();
 
         for (i, tex) in self.textures.iter().enumerate() {
+            // dbg!(i);
             tex.bind(i as u32);
         }
 
@@ -212,7 +215,7 @@ where
     let materials: Vec<Material> = document
         .materials()
         .into_iter()
-        .par_bridge()
+        // .par_bridge()
         .map(Material::from)
         .collect();
 
@@ -305,5 +308,5 @@ fn process_mesh(buffers: &[gltf::buffer::Data], m: &gltf::Mesh) -> Mesh {
         })
         .collect();
 
-    Mesh::new(primitives)
+    Mesh::new(primitives, m.name().map(String::from))
 }

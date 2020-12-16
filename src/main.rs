@@ -26,7 +26,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let m_path = format!("{}/models/matilda/scene.gltf", root);
     // let m_path = format!("{}/models/back/scene.gltf", root);
     // let m_path = format!("{}/models/tests/BoxAnimated.gltf", root);
-    let m_path = format!("{}/models/tests/AnimatedTriangle.gltf", root);
+    let m_path = format!("{}/models/tests/InterpolationTest.gltf", root);
+    // let m_path = format!("{}/models/tests/AnimatedTriangle.gltf", root);
     // let m_path = format!("{}/models/dragon.glb", root);
 
     let mut window = setup();
@@ -97,18 +98,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut delta = 0.0;
 
-    let time = window.glfw.get_time() as f32;
+    // let time = window.glfw.get_time() as f32;
     while !window.should_close() {
         let now = window.glfw.get_time() as f32;
         delta += (now - last_time) / fps;
 
         if delta >= 1.0 {
-            // scene.borrow_mut().update(now - last_time);
+            scene.borrow_mut().update(now - last_time);
+            delta -= 1.0;
         }
         last_time = now;
-        scene
-            .borrow_mut()
-            .update(window.glfw.get_time() as f32 - time);
+        // scene
+        //     .borrow_mut()
+        //     .update(window.glfw.get_time() as f32 - time);
         aabb_program.set_uniform("view", camera.borrow().get_matrix());
         aabb_program.set_uniform(
             "proj",

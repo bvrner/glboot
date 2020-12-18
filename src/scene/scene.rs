@@ -6,7 +6,7 @@ use crate::{
 use cgmath::{prelude::*, Matrix4, Quaternion, Vector3};
 use thiserror::Error;
 
-use super::{animations::Animation, Mesh, Node, Primitive, Vertice};
+use super::{animations::Animation, skin::Skin, Mesh, Node, Primitive, Vertice};
 
 // use rayon::prelude::*;
 use std::convert::TryFrom;
@@ -15,11 +15,13 @@ use std::path::Path;
 #[derive(Debug)]
 pub struct Scene {
     // use boxed slices instead?
-    nodes: Vec<Node>,  // all nodes
-    roots: Vec<usize>, // indices of the roots
+    nodes: Vec<Node>,                         // all nodes
+    roots: Vec<usize>,                        // indices of the roots
+    node_parent: Vec<(usize, Option<usize>)>, // (node, parent) indices for traversal
     textures: Vec<Texture>,
     materials: Vec<Material>,
     animations: Vec<Animation>,
+    skins: Vec<Skin>,
     pub aabb: Aabb,
     pub scale: f32,
     pub rotation: Quaternion<f32>,
@@ -49,6 +51,18 @@ impl Scene {
             anim.animate(time, &mut self.nodes);
         }
         // }
+
+        let this_transform = Matrix4::from(self.rotation)
+            * Matrix4::from_translation(self.translation)
+            * Matrix4::from_scale(self.scale);
+
+        for (node, parent) in self.node_parent.iter() {
+            let parent_transform = parent.map_or(this_transform, |p_index| {
+                self.nodes[p_index].global_transform
+            });
+
+            self.nodes[*node].update_global(parent_transform);
+        }
     }
 
     pub fn render(&self, shader: &mut ShaderProgram, aabb_shader: &mut ShaderProgram) {
@@ -70,7 +84,7 @@ impl Scene {
 
         // start rendering by the roots which will render it's children and so on and so forth
         for &node in self.roots.iter() {
-            self.nodes[node].draw(shader, &self.materials, &self.nodes, transform);
+            self.nodes[node].draw(shader, &self.materials, &self.nodes, &self.skins);
         }
         shader.unbind();
 
@@ -165,6 +179,11 @@ where
         .map(|node| process_node(&buffers, &node))
         .collect();
 
+    let skins = document
+        .skins()
+        .map(|s| Skin::from_gltf(&s, &buffers))
+        .collect();
+
     // this likely won't work for files with multiple scenes
     // but It's not a concern for now
     let mut roots = Vec::new();
@@ -174,11 +193,14 @@ where
         }
     }
 
+    let node_parent = super::node::build_tree(&nodes, &roots);
+
     let mut scene = Scene {
         roots,
         nodes,
         textures,
         materials,
+        skins,
         animations: document
             .animations()
             .map(|anim| Animation::new(&anim, &buffers))
@@ -191,6 +213,7 @@ where
         vbo_: VertexBuffer::default(),
         ibo_: IndexBuffer::default(),
         draw_aabb: false,
+        node_parent,
         // anim_index: None,
     };
 
@@ -202,8 +225,9 @@ fn process_node(buffers: &[gltf::buffer::Data], node: &gltf::Node) -> Node {
     let mesh = node.mesh().map(|m| process_mesh(&buffers, &m));
     let transform = node.transform();
     let children = node.children().map(|child| child.index()).collect();
+    let skin = node.skin().map(|s| s.index());
 
-    Node::new(mesh, transform, children)
+    Node::new(mesh, transform, children, skin)
 }
 
 fn process_mesh(buffers: &[gltf::buffer::Data], m: &gltf::Mesh) -> Mesh {
@@ -236,6 +260,19 @@ fn process_mesh(buffers: &[gltf::buffer::Data], m: &gltf::Mesh) -> Mesh {
             if let Some(tex) = reader.read_tex_coords(0) {
                 for (i, coord) in tex.into_f32().enumerate() {
                     vertices[i].tex = coord.into();
+                }
+            }
+
+            if let Some(joints) = reader.read_joints(0) {
+                for (i, j) in joints.into_u16().enumerate() {
+                    vertices[i].joints =
+                        cgmath::Vector4::new(j[0] as f32, j[1] as f32, j[2] as f32, j[3] as f32);
+                }
+            }
+
+            if let Some(w) = reader.read_weights(0) {
+                for (i, w) in w.into_f32().enumerate() {
+                    vertices[i].weights = cgmath::Vector4::from(w);
                 }
             }
 

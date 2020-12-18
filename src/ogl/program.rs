@@ -7,7 +7,7 @@ use cgmath::prelude::*;
 use cgmath::{Array, Matrix2, Matrix3, Matrix4, Vector2, Vector3, Vector4};
 
 #[derive(Debug)]
-pub struct ShaderProgram(GLuint, HashMap<GLint, Uniform>);
+pub struct ShaderProgram(pub GLuint, HashMap<GLint, Uniform>);
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Uniform {

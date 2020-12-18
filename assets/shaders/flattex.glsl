@@ -3,8 +3,13 @@
 
 layout (location = 0) in vec3 aPos;
 layout (location = 2) in vec2 aTex;
+layout (location = 3) in vec4 aJoints;
+layout (location = 4) in vec4 aWeights;
 
 out vec2 TexCoords;
+
+// rem
+uniform mat4 joints[2];
 
 uniform mat4 model;
 uniform mat4 view;
@@ -13,7 +18,14 @@ uniform mat4 projection;
 void main() {
     TexCoords = aTex;
 
-    gl_Position = projection * view * model * vec4(aPos, 1.0);
+   mat4 skinning = aWeights.x * joints[int(aJoints.x)] +
+    aWeights.y * joints[int(aJoints.y)] +
+    aWeights.z * joints[int(aJoints.z)] +
+    aWeights.w * joints[int(aJoints.w)];
+
+    mat4 mv = view * model;
+    vec4 pos = mv * skinning * vec4(aPos, 1.0);
+    gl_Position = projection * pos;
 }
 #end vertex
 

@@ -26,7 +26,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let m_path = format!("{}/models/matilda/scene.gltf", root);
     // let m_path = format!("{}/models/back/scene.gltf", root);
     // let m_path = format!("{}/models/tests/BoxAnimated.gltf", root);
-    let m_path = format!("{}/models/tests/InterpolationTest.gltf", root);
+    // let m_path = format!("{}/models/tests/InterpolationTest.gltf", root);
+    let m_path = format!("{}/models/tests/SimpleSkin.gltf", root);
     // let m_path = format!("{}/models/tests/AnimatedTriangle.gltf", root);
     // let m_path = format!("{}/models/dragon.glb", root);
 

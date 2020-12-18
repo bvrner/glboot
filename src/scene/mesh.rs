@@ -1,4 +1,4 @@
-use cgmath::Matrix4;
+use cgmath::{Matrix4, Vector4};
 use cgmath::{Vector2, Vector3};
 
 use crate::{
@@ -35,6 +35,8 @@ pub struct Vertice {
     pub pos: Vector3<f32>,
     pub normal: Vector3<f32>,
     pub tex: Vector2<f32>,
+    pub joints: Vector4<f32>,
+    pub weights: Vector4<f32>,
 }
 
 impl Mesh {
@@ -127,7 +129,9 @@ impl Primitive {
         let layout = layout![
             (3, f32, gl::FLOAT),
             (3, f32, gl::FLOAT),
-            (2, f32, gl::FLOAT)
+            (2, f32, gl::FLOAT),
+            (4, f32, gl::FLOAT),
+            (4, f32, gl::FLOAT)
         ];
 
         vao.add_buffer(&vbo, &layout);
@@ -149,6 +153,8 @@ impl Default for Vertice {
             pos: Vector3::new(0.0, 0.0, 0.0),
             normal: Vector3::new(0.0, 0.0, 0.0),
             tex: Vector2::new(0.0, 0.0),
+            joints: Vector4::new(0.0, 0.0, 0.0, 0.0),
+            weights: Vector4::new(0.0, 0.0, 0.0, 0.0),
         }
     }
 }

@@ -31,70 +31,8 @@ pub struct Scene {
     vbo_: VertexBuffer,
     ibo_: IndexBuffer,
     draw_aabb: bool,
-}
-
-impl ImRender for Scene {
-    fn render(&mut self, ui: &imgui::Ui) {
-        if imgui::CollapsingHeader::new(imgui::im_str!("Scene")).build(&ui) {
-            imgui::TreeNode::new(imgui::im_str!("m1"))
-                .label(imgui::im_str!("Model"))
-                .build(ui, || {
-                    if let Some(t_node) = imgui::TreeNode::new(imgui::im_str!("m1.1"))
-                        .label(imgui::im_str!("Transformations"))
-                        .push(ui)
-                    {
-                        if imgui::Slider::new(imgui::im_str!("Scale"))
-                            .range(0.0001..=1.0)
-                            .build(&ui, &mut self.scale)
-                        {
-                            if self.scale < 0.0001 {
-                                self.scale = 0.1
-                            }
-                        }
-
-                        let bid = ui.push_id("Reset");
-
-                        ui.same_line(0.0);
-                        if ui.small_button(imgui::im_str!("Reset")) {
-                            self.scale = 1.0;
-                        }
-
-                        bid.pop(ui);
-
-                        let mut vec = self.translation.into();
-                        if imgui::InputFloat3::new(ui, imgui::im_str!("Translation"), &mut vec)
-                            .build()
-                        {
-                            self.translation = vec.into();
-                        }
-
-                        ui.same_line(0.0);
-                        if ui.small_button(imgui::im_str!("Reset")) {
-                            self.translation = Vector3::new(0.0, 0.0, 0.0);
-                        }
-
-                        // let mut vec = self.rotation.into();
-                        // if imgui::InputFloat4::new(ui, imgui::im_str!("Rotation"), &mut vec).build() {
-                        //     self.rotation = vec.into();
-                        // }
-
-                        // if ui.small_button(imgui::im_str!("Reset")) {
-                        //     self.rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
-                        // }
-                        //
-                        t_node.pop(ui);
-                    }
-
-                    if let Some(o_node) = imgui::TreeNode::new(imgui::im_str!("m1.2"))
-                        .label(imgui::im_str!("Other"))
-                        .push(ui)
-                    {
-                        ui.checkbox(imgui::im_str!("AABB"), &mut self.draw_aabb);
-                        o_node.pop(ui)
-                    }
-                });
-        }
-    }
+    // other options
+    // anim_index: Option<usize>,
 }
 
 impl Scene {
@@ -104,10 +42,13 @@ impl Scene {
 
     pub fn update(&mut self, time: f32) {
         // TODO change animation during runtime
-        // self.animations[0].animate(time, &mut self.nodes);
+        // if let Some(i) = self.anim_index {
+        // self.animations[i].animate(time, &mut self.nodes);
+        // } else {
         for anim in self.animations.iter_mut() {
             anim.animate(time, &mut self.nodes);
         }
+        // }
     }
 
     pub fn render(&self, shader: &mut ShaderProgram, aabb_shader: &mut ShaderProgram) {
@@ -240,7 +181,7 @@ where
         materials,
         animations: document
             .animations()
-            .map(|anim| Animation::new(anim, &buffers))
+            .map(|anim| Animation::new(&anim, &buffers))
             .collect(),
         scale: 1.0,
         rotation: Quaternion::new(1.0, 0.0, 0.0, 0.0),
@@ -250,6 +191,7 @@ where
         vbo_: VertexBuffer::default(),
         ibo_: IndexBuffer::default(),
         draw_aabb: false,
+        // anim_index: None,
     };
 
     scene.gen_aabb();
@@ -309,4 +251,85 @@ fn process_mesh(buffers: &[gltf::buffer::Data], m: &gltf::Mesh) -> Mesh {
         .collect();
 
     Mesh::new(primitives, m.name().map(String::from))
+}
+
+impl ImRender for Scene {
+    fn render(&mut self, ui: &imgui::Ui) {
+        if imgui::CollapsingHeader::new(imgui::im_str!("Scene")).build(&ui) {
+            imgui::TreeNode::new(imgui::im_str!("m1"))
+                .label(imgui::im_str!("Model"))
+                .build(ui, || {
+                    if let Some(t_node) = imgui::TreeNode::new(imgui::im_str!("m1.1"))
+                        .label(imgui::im_str!("Transformations"))
+                        .push(ui)
+                    {
+                        if imgui::Slider::new(imgui::im_str!("Scale"))
+                            .range(0.0001..=1.0)
+                            .build(&ui, &mut self.scale)
+                        {
+                            if self.scale < 0.0001 {
+                                self.scale = 0.1
+                            }
+                        }
+
+                        let bid = ui.push_id("Reset");
+
+                        // ui.same_line(0.0);
+                        if ui.small_button(imgui::im_str!("Reset")) {
+                            self.scale = 1.0;
+                        }
+
+                        bid.pop(ui);
+
+                        let mut vec = self.translation.into();
+                        if imgui::InputFloat3::new(ui, imgui::im_str!("Translation"), &mut vec)
+                            .build()
+                        {
+                            self.translation = vec.into();
+                        }
+
+                        // ui.same_line(0.0);
+                        if ui.small_button(imgui::im_str!("Reset")) {
+                            self.translation = Vector3::new(0.0, 0.0, 0.0);
+                        }
+
+                        // let mut vec = self.rotation.into();
+                        // if imgui::InputFloat4::new(ui, imgui::im_str!("Rotation"), &mut vec).build() {
+                        //     self.rotation = vec.into();
+                        // }
+
+                        // if ui.small_button(imgui::im_str!("Reset")) {
+                        //     self.rotation = Quaternion::new(1.0, 0.0, 0.0, 0.0);
+                        // }
+                        //
+                        t_node.pop(ui);
+                    }
+
+                    if let Some(a_node) = imgui::TreeNode::new(imgui::im_str!("m1.2"))
+                        .label(imgui::im_str!("Animations"))
+                        .push(ui)
+                    {
+                        if let Some(combo) =
+                            imgui::ComboBox::new(imgui::im_str!("Avaliable")).begin(ui)
+                        {
+                            for anim in self.animations.iter() {
+                                imgui::Selectable::new(&imgui::im_str!("{}", &anim.name)).build(ui);
+                            }
+
+                            combo.end(ui);
+                        }
+
+                        a_node.pop(ui);
+                    }
+
+                    if let Some(o_node) = imgui::TreeNode::new(imgui::im_str!("m1.3"))
+                        .label(imgui::im_str!("Other"))
+                        .push(ui)
+                    {
+                        ui.checkbox(imgui::im_str!("AABB"), &mut self.draw_aabb);
+                        o_node.pop(ui)
+                    }
+                });
+        }
+    }
 }

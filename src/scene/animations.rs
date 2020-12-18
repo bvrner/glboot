@@ -7,6 +7,8 @@ pub struct Animation {
     rotations: Vec<Channel<Quaternion<f32>>>,
     translations: Vec<Channel<Vector3<f32>>>,
     scales: Vec<Channel<Vector3<f32>>>,
+
+    pub name: String,
 }
 
 #[derive(Debug, Clone)]
@@ -61,7 +63,7 @@ impl FrameData {
 }
 
 impl Animation {
-    pub fn new(anim: gltf::Animation, buf: &[gltf::buffer::Data]) -> Self {
+    pub fn new(anim: &gltf::Animation, buf: &[gltf::buffer::Data]) -> Self {
         Self {
             rotations: anim
                 .channels()
@@ -80,6 +82,7 @@ impl Animation {
                 .filter(|ch| ch.target().property() == Property::Scale)
                 .map(|ch| Channel::<Vector3<f32>>::new_scale(ch, buf))
                 .collect(),
+            name: anim.name().map_or(anim.index().to_string(), String::from),
         }
     }
 
@@ -194,14 +197,11 @@ impl<T> Channel<T> {
         let frame = FrameData {
             interp: 0.0,
             time_accum: 0.0,
-            //            frame_dur: input[1] - input[0],
             curr_time: input[0],
-            //           old_time: 0.0,
             end_time: input[input.len() - 1],
             start_time: input[0],
             prev_index: 0,
             next_index: 1,
-            //         end_index: input.len() - 1,
         };
 
         Channel {
@@ -227,14 +227,11 @@ impl<T> Channel<T> {
         let frame = FrameData {
             interp: 0.0,
             time_accum: 0.0,
-            //            frame_dur: input[1] - input[0],
             curr_time: input[0],
-            //           old_time: 0.0,
             end_time: input[input.len() - 1],
             start_time: input[0],
             prev_index: 0,
             next_index: 1,
-            //         end_index: input.len() - 1,
         };
 
         Channel {

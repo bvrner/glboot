@@ -6,7 +6,11 @@ use crate::{
 use cgmath::{prelude::*, Matrix4, Quaternion, Vector3};
 use thiserror::Error;
 
-use super::{animations::Animation, skin::Skin, Mesh, Node, Primitive, Vertice};
+use super::{
+    animations::{Animation, Animations, Mode},
+    skin::Skin,
+    Mesh, Node, Primitive, Vertice,
+};
 
 // use rayon::prelude::*;
 use std::convert::TryFrom;
@@ -20,7 +24,7 @@ pub struct Scene {
     node_parent: Vec<(usize, Option<usize>)>, // (node, parent) indices for traversal
     textures: Vec<Texture>,
     materials: Vec<Material>,
-    animations: Vec<Animation>,
+    animations: Animations,
     skins: Vec<Skin>,
     pub aabb: Aabb,
     pub scale: f32,
@@ -43,18 +47,13 @@ impl Scene {
     }
 
     pub fn update(&mut self, time: f32) {
-        // TODO change animation during runtime
-        // if let Some(i) = self.anim_index {
-        // self.animations[i].animate(time, &mut self.nodes);
-        // } else {
-        for anim in self.animations.iter_mut() {
-            anim.animate(time, &mut self.nodes);
-        }
-        // }
-
-        let this_transform = Matrix4::from(self.rotation)
-            * Matrix4::from_translation(self.translation)
+        self.animations.animate(time, &mut self.nodes); // {
+        let this_transform = Matrix4::from_translation(self.translation)
+            * Matrix4::from(self.rotation)
             * Matrix4::from_scale(self.scale);
+        // let this_transform = Matrix4::from(self.rotation)
+        //     * Matrix4::from_translation(self.translation)
+        //     * Matrix4::from_scale(self.scale);
 
         for (node, parent) in self.node_parent.iter() {
             let parent_transform = parent.map_or(this_transform, |p_index| {
@@ -63,6 +62,7 @@ impl Scene {
 
             self.nodes[*node].update_global(parent_transform);
         }
+        // }
     }
 
     pub fn render(&self, shader: &mut ShaderProgram, aabb_shader: &mut ShaderProgram) {
@@ -74,13 +74,13 @@ impl Scene {
         }
 
         // TODO cache the transform
-        // let transform = Matrix4::from_translation(self.translation)
-        //     * Matrix4::from(self.rotation)
-        //     * Matrix4::from_scale(self.scale);
-        // TODO maybe a option to select the transform order?
-        let transform = Matrix4::from(self.rotation)
-            * Matrix4::from_translation(self.translation)
+        let transform = Matrix4::from_translation(self.translation)
+            * Matrix4::from(self.rotation)
             * Matrix4::from_scale(self.scale);
+        // TODO maybe a option to select the transform order?
+        // let transform = Matrix4::from(self.rotation)
+        //     * Matrix4::from_translation(self.translation)
+        //     * Matrix4::from_scale(self.scale);
 
         // start rendering by the roots which will render it's children and so on and so forth
         for &node in self.roots.iter() {
@@ -194,6 +194,10 @@ where
     }
 
     let node_parent = super::node::build_tree(&nodes, &roots);
+    let animations = document
+        .animations()
+        .map(|anim| Animation::new(&anim, &buffers))
+        .collect();
 
     let mut scene = Scene {
         roots,
@@ -201,10 +205,7 @@ where
         textures,
         materials,
         skins,
-        animations: document
-            .animations()
-            .map(|anim| Animation::new(&anim, &buffers))
-            .collect(),
+        animations: Animations::new(animations),
         scale: 1.0,
         rotation: Quaternion::new(1.0, 0.0, 0.0, 0.0),
         translation: Vector3::new(0.0, 0.0, 0.0),
@@ -283,7 +284,13 @@ fn process_mesh(buffers: &[gltf::buffer::Data], m: &gltf::Mesh) -> Mesh {
             };
             let bounds = primitive.bounding_box().into();
 
-            Primitive::setup(vertices, indices, primitive.material().index(), bounds)
+            Primitive::setup(
+                vertices,
+                indices,
+                primitive.material().index(),
+                bounds,
+                primitive.mode().as_gl_enum(),
+            )
         })
         .collect();
 
@@ -325,11 +332,13 @@ impl ImRender for Scene {
                             self.translation = vec.into();
                         }
 
+                        let bid = ui.push_id("Reset");
                         // ui.same_line(0.0);
                         if ui.small_button(imgui::im_str!("Reset")) {
                             self.translation = Vector3::new(0.0, 0.0, 0.0);
                         }
 
+                        bid.pop(ui);
                         // let mut vec = self.rotation.into();
                         // if imgui::InputFloat4::new(ui, imgui::im_str!("Rotation"), &mut vec).build() {
                         //     self.rotation = vec.into();
@@ -342,19 +351,77 @@ impl ImRender for Scene {
                         t_node.pop(ui);
                     }
 
+                    // TODO move this elsewhere, maybe at the animations structure
                     if let Some(a_node) = imgui::TreeNode::new(imgui::im_str!("m1.2"))
                         .label(imgui::im_str!("Animations"))
                         .push(ui)
                     {
-                        if let Some(combo) =
-                            imgui::ComboBox::new(imgui::im_str!("Avaliable")).begin(ui)
+                        let preview = match self.animations.mode {
+                            Mode::All => imgui::im_str!("{}", "All"),
+                            Mode::None => imgui::im_str!("{}", "None"),
+                            Mode::Single(i) => imgui::im_str!("{}", self.animations.inner[i].name),
+                        };
+
+                        if let Some(combo) = imgui::ComboBox::new(imgui::im_str!("Selected"))
+                            .preview_value(&preview)
+                            .begin(ui)
                         {
-                            for anim in self.animations.iter() {
-                                imgui::Selectable::new(&imgui::im_str!("{}", &anim.name)).build(ui);
+                            for (i, anim) in self.animations.inner.iter().enumerate() {
+                                let is_selected = self.animations.mode == i;
+
+                                if imgui::Selectable::new(&imgui::im_str!("{}", &anim.name))
+                                    .selected(is_selected)
+                                    .build(ui)
+                                {
+                                    self.animations.mode = Mode::Single(i);
+                                }
+
+                                if is_selected {
+                                    ui.set_item_default_focus();
+                                }
+                            }
+
+                            let all = self.animations.mode == Mode::All;
+
+                            if imgui::Selectable::new(imgui::im_str!("All"))
+                                .selected(all)
+                                .build(ui)
+                            {
+                                self.animations.mode = Mode::All;
+                            }
+
+                            if all {
+                                ui.set_item_default_focus();
+                            }
+
+                            let none = self.animations.mode == Mode::None;
+
+                            if imgui::Selectable::new(imgui::im_str!("None"))
+                                .selected(none)
+                                .build(ui)
+                            {
+                                self.animations.mode = Mode::None;
+                            }
+
+                            if none {
+                                ui.set_item_default_focus();
                             }
 
                             combo.end(ui);
                         }
+
+                        let b_label = if self.animations.paused {
+                            imgui::im_str!("Play")
+                        } else {
+                            imgui::im_str!("Pause")
+                        };
+
+                        self.animations.paused ^= ui.button(b_label, [40.0, 22.0]);
+                        // ui.same_line(0.0);
+
+                        // if ui.button(imgui::im_str!("Reset"), [40.0, 22.0]) {
+                        //     self.animations.reset();
+                        // }
 
                         a_node.pop(ui);
                     }

@@ -1,20 +1,15 @@
 use gl::types::*;
 
-use cgmath::{Matrix4, Vector4};
-use cgmath::{Vector2, Vector3};
+use cgmath::{Vector2, Vector3, Vector4};
 
 use crate::{
     aabb::Aabb,
-    ogl::{
-        buffers::{array::VertexArray, index::IndexBuffer, vertex::VertexBuffer},
-        material::Material,
-    },
-    ShaderProgram,
+    ogl::buffers::{array::VertexArray, index::IndexBuffer, vertex::VertexBuffer},
 };
 
 #[derive(Debug)]
 pub struct Mesh {
-    primitives: Vec<Primitive>,
+    pub primitives: Vec<Primitive>,
     pub name: Option<String>,
     pub aabb: Aabb,
 }
@@ -23,14 +18,14 @@ pub struct Mesh {
 pub struct Primitive {
     // vertices: Vec<Vertice>, // should I keep them here?
     // indices: Vec<u32>,
-    material: Option<usize>,
-    vbo: VertexBuffer,
-    vao: VertexArray,
-    indices_count: i32,
-    vertice_count: i32,
-    ibo: IndexBuffer,
+    pub material: Option<usize>,
+    pub vbo: VertexBuffer,
+    pub vao: VertexArray,
+    pub indices_count: i32,
+    pub vertice_count: i32,
+    pub ibo: IndexBuffer,
     aabb: Aabb,
-    mode: GLenum,
+    pub mode: GLenum,
 }
 
 #[repr(C)]
@@ -55,74 +50,9 @@ impl Mesh {
             name,
         }
     }
-
-    pub fn draw(
-        &self,
-        shader: &mut ShaderProgram,
-        materials: &[Material],
-        transform: Matrix4<f32>,
-    ) {
-        for prim in self.primitives.iter() {
-            prim.draw(
-                shader, materials, transform,
-                // self.name == Some(String::from("Plane.001")),
-            );
-        }
-    }
 }
 
 impl Primitive {
-    pub fn draw(
-        &self,
-        shader: &mut ShaderProgram,
-        materials: &[Material],
-        transform: Matrix4<f32>,
-        // dbg: bool,
-    ) {
-        if let Some(mat_index) = self.material {
-            let material = &materials[mat_index];
-
-            shader.set_uniform("material.base_color", material.base_color);
-            shader.set_uniform("material.has_base_color", 1);
-
-            if let Some(base_tex_index) = material.base_tex {
-                shader.set_uniform("material.base_tex", base_tex_index as i32);
-                shader.set_uniform("material.has_base_tex", 1);
-            } else {
-                shader.set_uniform("material.has_base_tex", 0);
-            }
-        } else {
-            // shader.set_uniform("material.base_color", material.base_color);
-            shader.set_uniform("material.has_base_color", 0);
-
-            // shader.set_uniform("material.base_tex", base_tex_index as i32);
-            shader.set_uniform("material.has_base_tex", 0);
-        }
-
-        shader.set_uniform("model", transform);
-
-        self.vao.bind();
-        self.ibo.bind();
-        shader.send_uniforms();
-
-        // TODO instancing
-        unsafe {
-            if self.indices_count > 0 {
-                gl::DrawElements(
-                    self.mode,
-                    self.indices_count,
-                    gl::UNSIGNED_INT,
-                    std::ptr::null(),
-                );
-            } else {
-                gl::DrawArrays(self.mode, 0, self.vertice_count);
-            }
-        };
-
-        self.ibo.unbind();
-        self.vao.unbind();
-    }
-
     pub fn setup(
         vertices: Vec<Vertice>,
         indices: Vec<u32>,

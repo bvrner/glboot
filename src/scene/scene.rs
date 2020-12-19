@@ -19,13 +19,15 @@ use std::path::Path;
 #[derive(Debug)]
 pub struct Scene {
     // use boxed slices instead?
-    nodes: Vec<Node>,                         // all nodes
-    roots: Vec<usize>,                        // indices of the roots
+    pub nodes: Vec<Node>,  // all nodes
+    pub roots: Vec<usize>, // indices of the roots
+
     node_parent: Vec<(usize, Option<usize>)>, // (node, parent) indices for traversal
-    textures: Vec<Texture>,
-    materials: Vec<Material>,
-    animations: Animations,
-    skins: Vec<Skin>,
+    pub textures: Vec<Texture>,
+    pub materials: Vec<Material>,
+    pub animations: Animations,
+    pub skins: Vec<Skin>,
+
     pub aabb: Aabb,
     pub scale: f32,
     pub rotation: Quaternion<f32>,
@@ -65,64 +67,9 @@ impl Scene {
         // }
     }
 
-    pub fn render(&self, shader: &mut ShaderProgram, aabb_shader: &mut ShaderProgram) {
-        shader.bind();
-
-        for (i, tex) in self.textures.iter().enumerate() {
-            // dbg!(i);
-            tex.bind(i as u32);
-        }
-
-        // TODO cache the transform
-        let transform = Matrix4::from_translation(self.translation)
-            * Matrix4::from(self.rotation)
-            * Matrix4::from_scale(self.scale);
-        // TODO maybe a option to select the transform order?
-        // let transform = Matrix4::from(self.rotation)
-        //     * Matrix4::from_translation(self.translation)
-        //     * Matrix4::from_scale(self.scale);
-
-        // start rendering by the roots which will render it's children and so on and so forth
-        for &node in self.roots.iter() {
-            self.nodes[node].draw(shader, &self.materials, &self.nodes, &self.skins);
-        }
-        shader.unbind();
-
-        if self.draw_aabb {
-            aabb_shader.bind();
-
-            aabb_shader.set_uniform("trans", transform);
-            aabb_shader.send_uniforms();
-
-            self.vao_.bind();
-            self.ibo_.bind();
-
-            // Aabb indices will always be the same, so it's safe to hardcode
-            unsafe {
-                gl::DrawElements(gl::LINE_LOOP, 4, gl::UNSIGNED_INT, std::ptr::null());
-                gl::DrawElements(
-                    gl::LINE_LOOP,
-                    4,
-                    gl::UNSIGNED_INT,
-                    (4 * 4) as *const u32 as *const std::ffi::c_void,
-                );
-                gl::DrawElements(
-                    gl::LINES,
-                    8,
-                    gl::UNSIGNED_INT,
-                    (8 * 4) as *const u32 as *const std::ffi::c_void,
-                );
-            }
-
-            aabb_shader.unbind();
-            self.vao_.unbind();
-            self.ibo_.unbind();
-        }
-    }
-
-    fn gen_aabb(&mut self) {
+    fn initial_setup(&mut self) {
+        // first generate AABB
         let mut aabb = Aabb::default();
-
         for &node in self.roots.iter() {
             let root_aabb = self.nodes[node].gen_aabb(&self.nodes, Matrix4::identity());
             aabb = aabb.surrounds(&root_aabb);
@@ -141,6 +88,19 @@ impl Scene {
         self.vao_ = vao_;
         self.vbo_ = vbo_;
         self.ibo_ = ibo_;
+
+        // set the global transform of the nodes
+        let this_transform = Matrix4::from_translation(self.translation)
+            * Matrix4::from(self.rotation)
+            * Matrix4::from_scale(self.scale);
+
+        for (node, parent) in self.node_parent.iter() {
+            let parent_transform = parent.map_or(this_transform, |p_index| {
+                self.nodes[p_index].global_transform
+            });
+
+            self.nodes[*node].update_global(parent_transform);
+        }
     }
 }
 
@@ -218,7 +178,7 @@ where
         // anim_index: None,
     };
 
-    scene.gen_aabb();
+    scene.initial_setup();
     Ok(scene)
 }
 

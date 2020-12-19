@@ -1,10 +1,8 @@
-use crate::{
-    aabb::Aabb,
-    ogl::{material::Material, program::ShaderProgram},
-};
+use cgmath::{Matrix4, Quaternion, Vector3};
+
+use crate::aabb::Aabb;
 
 use super::Mesh;
-use cgmath::{Matrix, Matrix4, Quaternion, SquareMatrix, Vector3};
 
 #[derive(Debug)]
 pub struct Node {
@@ -69,47 +67,6 @@ impl Node {
         }
 
         this_aabb
-    }
-
-    pub fn draw(
-        &self,
-        shader: &mut ShaderProgram,
-        materials: &[Material],
-        nodes: &[Node],
-        skins: &[super::skin::Skin], // transform: Matrix4<f32>,
-    ) {
-        if let Some(ref mesh) = self.mesh {
-            if let Some(skin) = self.skin {
-                let joints = &skins[skin].joints;
-                let joint_matrices: Vec<Matrix4<f32>> = joints
-                    .iter()
-                    .map(|joint| {
-                        self.global_transform.invert().unwrap()
-                            * nodes[joint.node].global_transform
-                            * joint.bind_matrix
-                    })
-                    .collect();
-
-                // dbg!(joint_matrices.len());
-
-                unsafe {
-                    let name = std::ffi::CString::new("joints").unwrap();
-                    gl::UniformMatrix4fv(
-                        gl::GetUniformLocation(shader.0, name.as_ptr()),
-                        joint_matrices.len() as i32,
-                        gl::FALSE,
-                        joint_matrices[0].as_ptr(),
-                    );
-                }
-            }
-            mesh.draw(shader, materials, self.global_transform);
-        }
-
-        for &child in self.children.iter() {
-            nodes[child].draw(
-                shader, materials, nodes, skins, /*, self.global_transform*/
-            );
-        }
     }
 }
 

@@ -1,8 +1,8 @@
 mod animations;
-mod mesh;
-mod node;
+pub mod mesh;
+pub mod node;
 mod scene;
-mod skin;
+pub mod skin;
 
 pub use mesh::*;
 pub use node::Node;

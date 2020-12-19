@@ -1,5 +1,10 @@
-use super::{buffers::*, program::ShaderProgram};
-use crate::{scene::Scene, ImRender};
+use cgmath::{Matrix, Matrix4, SquareMatrix};
+
+use super::{buffers::*, material::Material, program::ShaderProgram};
+use crate::{
+    scene::{skin::Skin, Mesh, Node, Scene},
+    ImRender,
+};
 
 const SCREEN_QUAD: [f32; 24] = [
     -1.0_f32, 1.0, 0.0, 1.0, -1.0, -1.0, 0.0, 0.0, 1.0, -1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0, 1.0,
@@ -64,8 +69,23 @@ impl Renderer {
             gl::PolygonMode(gl::FRONT_AND_BACK, self.p_mode);
         }
 
-        scene.render(&mut self.main, aabb_program);
+        // scene.render(&mut self.main, aabb_program);
+        self.main.bind();
+        let nodes = &scene.nodes;
+        let roots = &scene.roots;
+        let skins = &scene.skins;
+        let materials = &scene.materials;
+        let textures = &scene.textures;
 
+        for (i, tex) in textures.iter().enumerate() {
+            tex.bind(i as u32);
+        }
+
+        for root in roots.iter() {
+            self.render_node(&nodes[*root], skins, materials, nodes);
+        }
+
+        self.main.unbind();
         // model.draw(&mut program.borrow_mut());
         self.front.unbind();
         // copy data from fbo to another, needed for anti-aliasing
@@ -89,6 +109,90 @@ impl Renderer {
             self.int.unbind_textures();
             self.post.unbind();
             self.screen.vao.unbind();
+        }
+    }
+
+    fn render_node(&mut self, this: &Node, skins: &[Skin], materials: &[Material], nodes: &[Node]) {
+        if let Some(ref mesh) = this.mesh {
+            if let Some(skin) = this.skin {
+                let joints = &skins[skin].joints;
+                let joint_matrices: Vec<Matrix4<f32>> = joints
+                    .iter()
+                    .map(|joint| {
+                        this.global_transform.invert().unwrap()
+                            * nodes[joint.node].global_transform
+                            * joint.bind_matrix
+                    })
+                    .collect();
+
+                // dbg!(joint_matrices.len());
+
+                unsafe {
+                    let name = std::ffi::CString::new("joints").unwrap();
+                    gl::UniformMatrix4fv(
+                        gl::GetUniformLocation(self.main.0, name.as_ptr()),
+                        joint_matrices.len() as i32,
+                        gl::FALSE,
+                        joint_matrices[0].as_ptr(),
+                    );
+                }
+            }
+
+            self.main.set_uniform("model", this.global_transform);
+            self.render_mesh(mesh, materials);
+        }
+
+        for child in this.children.iter() {
+            self.render_node(&nodes[*child], skins, materials, nodes);
+        }
+    }
+
+    fn render_mesh(&mut self, mesh: &Mesh, materials: &[Material]) {
+        let main = &mut self.main;
+
+        for prim in mesh.primitives.iter() {
+            if let Some(mat_index) = prim.material {
+                let material = &materials[mat_index];
+
+                main.set_uniform("material.base_color", material.base_color);
+                main.set_uniform("material.has_base_color", 1);
+
+                if let Some(base_tex_index) = material.base_tex {
+                    main.set_uniform("material.base_tex", base_tex_index as i32);
+                    main.set_uniform("material.has_base_tex", 1);
+                } else {
+                    main.set_uniform("material.has_base_tex", 0);
+                }
+            } else {
+                // shader.set_uniform("material.base_color", material.base_color);
+                main.set_uniform("material.has_base_color", 0);
+
+                // shader.set_uniform("material.base_tex", base_tex_index as i32);
+                main.set_uniform("material.has_base_tex", 0);
+            }
+
+            // main.set_uniform("model", transform);
+
+            prim.vao.bind();
+            prim.ibo.bind();
+            main.send_uniforms();
+
+            // TODO instancing
+            unsafe {
+                if prim.indices_count > 0 {
+                    gl::DrawElements(
+                        prim.mode,
+                        prim.indices_count,
+                        gl::UNSIGNED_INT,
+                        std::ptr::null(),
+                    );
+                } else {
+                    gl::DrawArrays(prim.mode, 0, prim.vertice_count);
+                }
+            };
+
+            prim.ibo.unbind();
+            prim.vao.unbind();
         }
     }
 

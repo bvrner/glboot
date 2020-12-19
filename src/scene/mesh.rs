@@ -1,3 +1,5 @@
+use gl::types::*;
+
 use cgmath::{Matrix4, Vector4};
 use cgmath::{Vector2, Vector3};
 
@@ -25,8 +27,10 @@ pub struct Primitive {
     vbo: VertexBuffer,
     vao: VertexArray,
     indices_count: i32,
+    vertice_count: i32,
     ibo: IndexBuffer,
     aabb: Aabb,
+    mode: GLenum,
 }
 
 #[repr(C)]
@@ -101,14 +105,18 @@ impl Primitive {
         self.ibo.bind();
         shader.send_uniforms();
 
-        // TODO instancing and check if there are indices
+        // TODO instancing
         unsafe {
-            gl::DrawElements(
-                gl::TRIANGLES,
-                self.indices_count,
-                gl::UNSIGNED_INT,
-                std::ptr::null(),
-            )
+            if self.indices_count > 0 {
+                gl::DrawElements(
+                    self.mode,
+                    self.indices_count,
+                    gl::UNSIGNED_INT,
+                    std::ptr::null(),
+                );
+            } else {
+                gl::DrawArrays(self.mode, 0, self.vertice_count);
+            }
         };
 
         self.ibo.unbind();
@@ -120,7 +128,9 @@ impl Primitive {
         indices: Vec<u32>,
         material: Option<usize>,
         aabb: Aabb,
+        mode: GLenum,
     ) -> Self {
+        let vertice_count = vertices.len() as i32;
         let indices_count = indices.len() as i32;
         let vbo = VertexBuffer::new(&vertices);
         let ibo = IndexBuffer::new(&indices);
@@ -140,9 +150,11 @@ impl Primitive {
             vbo,
             ibo,
             vao,
+            vertice_count,
             indices_count,
             material,
             aabb,
+            mode,
         }
     }
 }

@@ -12,6 +12,7 @@ pub struct Material {
     pub normal: Option<usize>,
     pub occlusion_tex: Option<usize>,
     pub occlusion_str: f32,
+    pub double_sided: bool,
 }
 
 impl<'a> From<gltf::Material<'a>> for Material {
@@ -34,6 +35,8 @@ impl<'a> From<gltf::Material<'a>> for Material {
             .map(|occ| (Some(occ.texture().index()), occ.strength()))
             .unwrap_or((None, 0.0));
 
+        let double_sided = mat.double_sided();
+
         Self {
             base_color,
             base_tex,
@@ -43,6 +46,7 @@ impl<'a> From<gltf::Material<'a>> for Material {
             normal,
             occlusion_tex,
             occlusion_str,
+            double_sided,
         }
     }
 }
@@ -58,6 +62,7 @@ impl Default for Material {
             normal: None,
             occlusion_tex: None,
             occlusion_str: 1.0,
+            double_sided: false,
         }
     }
 }

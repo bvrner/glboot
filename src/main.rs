@@ -25,9 +25,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let shader_path = format!("{}/shaders/procedural/bricks.glsl", root);
     // let m_path = format!("{}/models/matilda/scene.gltf", root);
     // let m_path = format!("{}/models/back/scene.gltf", root);
+    let m_path = format!("{}/models/fox/Fox.gltf", root);
     // let m_path = format!("{}/models/tests/BoxAnimated.gltf", root);
     // let m_path = format!("{}/models/tests/InterpolationTest.gltf", root);
-    let m_path = format!("{}/models/tests/SimpleSkin.gltf", root);
+    // let m_path = format!("{}/models/tests/SimpleSkin.gltf", root);
     // let m_path = format!("{}/models/tests/AnimatedTriangle.gltf", root);
     // let m_path = format!("{}/models/dragon.glb", root);
 
@@ -95,8 +96,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let fps = 1.0 / 60.0;
     let mut last_time = window.glfw.get_time() as f32;
-    // let timer = last_time;
-
+    let mut timer = last_time;
+    let mut updates: u32 = 0;
+    let mut frames: u32 = 0;
     let mut delta = 0.0;
 
     // let time = window.glfw.get_time() as f32;
@@ -107,6 +109,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if delta >= 1.0 {
             scene.borrow_mut().update(now - last_time);
             delta -= 1.0;
+            updates += 1;
         }
         last_time = now;
         // scene
@@ -124,7 +127,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         renderer
             .borrow_mut()
             .render(&scene.borrow(), &mut aabb_program);
-
+        frames += 1;
         imgui.draw(&mut window);
 
         {
@@ -142,6 +145,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // if window.glfw.get_time() as f32 - timer > 1.0 {
         //     timer += 1.0
         // }
+
+        if window.glfw.get_time() as f32 - timer > 1.0 {
+            timer += 1.0;
+            println!("FPS: {}", frames);
+            updates = 0;
+            frames = 0;
+        }
 
         for (_, event) in glfw::flush_messages(&events) {
             imgui.handle_event(&event);

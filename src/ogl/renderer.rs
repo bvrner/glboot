@@ -86,7 +86,6 @@ impl Renderer {
         }
 
         self.main.unbind();
-        // model.draw(&mut program.borrow_mut());
         self.front.unbind();
         // copy data from fbo to another, needed for anti-aliasing
         self.front.blit(&self.int);
@@ -154,6 +153,16 @@ impl Renderer {
             if let Some(mat_index) = prim.material {
                 let material = &materials[mat_index];
 
+                if material.double_sided {
+                    unsafe {
+                        gl::Disable(gl::CULL_FACE);
+                    }
+                } else {
+                    unsafe {
+                        gl::Disable(gl::CULL_FACE);
+                    }
+                }
+
                 main.set_uniform("material.base_color", material.base_color);
                 main.set_uniform("material.has_base_color", 1);
 
@@ -215,8 +224,7 @@ impl ImRender for Renderer {
             imgui::TreeNode::new(imgui::im_str!("r1"))
                 .label(imgui::im_str!("Color"))
                 .build(ui, || {
-                    if imgui::ColorPicker::new(imgui::im_str!("BG Color"), &mut self.bg_col)
-                        .build(ui)
+                    if imgui::ColorEdit::new(imgui::im_str!("BG Color"), &mut self.bg_col).build(ui)
                     {
                         unsafe {
                             gl::ClearColor(self.bg_col[0], self.bg_col[1], self.bg_col[2], 1.0);
@@ -240,6 +248,19 @@ impl ImRender for Renderer {
                     {
                         ui.text("WIP");
                         back.pop(ui);
+                    }
+                });
+            imgui::TreeNode::new(imgui::im_str!("r3"))
+                .label(imgui::im_str!("Other"))
+                .build(ui, || {
+                    let mut cond = self.p_mode != gl::FILL;
+
+                    if ui.checkbox(imgui::im_str!("Wireframe"), &mut cond) {
+                        self.p_mode = if self.p_mode == gl::FILL {
+                            gl::LINE
+                        } else {
+                            gl::FILL
+                        };
                     }
                 });
         }

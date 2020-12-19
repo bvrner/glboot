@@ -9,7 +9,7 @@ layout (location = 4) in vec4 aWeights;
 out vec2 TexCoords;
 
 // rem
-uniform mat4 joints[2];
+uniform mat4 joints[512];
 
 uniform mat4 model;
 uniform mat4 view;

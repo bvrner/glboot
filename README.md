@@ -13,7 +13,7 @@ This is very much a work in progress, but seeing how things are is nice, so I'll
 ![matilda](https://github.com/bvrner/glboot/blob/master/shots/matilda.png)
 glTF model loading. This amazing model was made by [nicolekeane](https://sketchfab.com/3d-models/matilda-7ddedfb652bd4ea091bc3de27f98fc02)
 
-![fox](https://github.com/bvrner/glboot/blob/master/shots/fox.gif)
+![fox](https://github.com/bvrner/glboot/blob/master/shots/fox.gif)<br/><br/>
 Vertex skinning and animations.
 
 ![dragon](https://github.com/bvrner/glboot/blob/master/shots/post.png)

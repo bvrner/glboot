@@ -3,6 +3,65 @@ use cgmath::{prelude::*, Quaternion, Vector3, VectorSpace};
 use gltf::animation::{util::ReadOutputs, Channel as gltfChannel, Interpolation, Property};
 
 #[derive(Debug, Clone)]
+pub struct Animations {
+    pub inner: Vec<Animation>,
+    pub mode: Mode,
+    pub paused: bool,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum Mode {
+    All,
+    None,
+    Single(usize),
+}
+
+impl PartialEq<usize> for Mode {
+    fn eq(&self, other: &usize) -> bool {
+        match self {
+            Mode::Single(i) => i.eq(other),
+            _ => false,
+        }
+    }
+}
+
+impl Animations {
+    pub fn new(inner: Vec<Animation>) -> Self {
+        Self {
+            inner,
+            mode: Mode::None,
+            paused: true,
+        }
+    }
+
+    pub fn reset(&mut self) {
+        for anim in self.inner.iter_mut() {
+            anim.reset();
+        }
+    }
+
+    pub fn animate(&mut self, time: f32, nodes: &mut [super::Node]) -> bool {
+        if !self.paused {
+            match self.mode {
+                Mode::All => {
+                    for anim in self.inner.iter_mut() {
+                        anim.animate(time, nodes);
+                    }
+                    true
+                }
+                Mode::None => false,
+                Mode::Single(i) => {
+                    self.inner[i].animate(time, nodes);
+                    true
+                }
+            }
+        } else {
+            false
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct Animation {
     rotations: Vec<Channel<Quaternion<f32>>>,
     translations: Vec<Channel<Vector3<f32>>>,
@@ -83,6 +142,18 @@ impl Animation {
                 .map(|ch| Channel::<Vector3<f32>>::new_scale(ch, buf))
                 .collect(),
             name: anim.name().map_or(anim.index().to_string(), String::from),
+        }
+    }
+
+    pub fn reset(&mut self) {
+        for rc in self.rotations.iter_mut() {
+            rc.reset();
+        }
+        for rt in self.translations.iter_mut() {
+            rt.reset();
+        }
+        for rs in self.scales.iter_mut() {
+            rs.reset();
         }
     }
 
@@ -183,6 +254,7 @@ impl<T> Channel<T> {
             frame,
         }
     }
+
     fn new_scale(ch: gltfChannel, buf: &[gltf::buffer::Data]) -> Channel<Vector3<f32>> {
         let reader = ch.reader(|buffer| Some(&buf[buffer.index()]));
         let target = ch.target().node().index();
@@ -242,6 +314,10 @@ impl<T> Channel<T> {
             interpolation: ch.sampler().interpolation(),
             frame,
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.frame.time_accum = 0.0;
     }
 }
 

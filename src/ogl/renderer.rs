@@ -172,6 +172,10 @@ impl Renderer {
                 } else {
                     main.set_uniform("material.has_base_tex", 0);
                 }
+
+                if let Some(normal_index) = material.normal {
+                    main.set_uniform("material.normal", normal_index as i32);
+                }
             } else {
                 // shader.set_uniform("material.base_color", material.base_color);
                 main.set_uniform("material.has_base_color", 0);

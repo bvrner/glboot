@@ -237,6 +237,12 @@ fn process_mesh(buffers: &[gltf::buffer::Data], m: &gltf::Mesh) -> Mesh {
                 }
             }
 
+            if let Some(t) = reader.read_tangents() {
+                for (i, t) in t.enumerate() {
+                    vertices[i].tangent = t.into();
+                }
+            }
+
             let indices = if let Some(ind) = reader.read_indices() {
                 ind.into_u32().collect()
             } else {
@@ -268,7 +274,7 @@ impl ImRender for Scene {
                         .push(ui)
                     {
                         if imgui::Slider::new(imgui::im_str!("Scale"))
-                            .range(0.0001..=1.0)
+                            .range(0.0001..=2.0)
                             .build(&ui, &mut self.scale)
                         {
                             if self.scale < 0.0001 {

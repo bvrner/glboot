@@ -36,6 +36,7 @@ pub struct Vertice {
     pub tex: Vector2<f32>,
     pub joints: Vector4<f32>,
     pub weights: Vector4<f32>,
+    pub tangent: Vector4<f32>,
 }
 
 impl Mesh {
@@ -71,6 +72,7 @@ impl Primitive {
             (3, f32, gl::FLOAT),
             (2, f32, gl::FLOAT),
             (4, f32, gl::FLOAT),
+            (4, f32, gl::FLOAT),
             (4, f32, gl::FLOAT)
         ];
 
@@ -97,6 +99,7 @@ impl Default for Vertice {
             tex: Vector2::new(0.0, 0.0),
             joints: Vector4::new(0.0, 0.0, 0.0, 0.0),
             weights: Vector4::new(0.0, 0.0, 0.0, 0.0),
+            tangent: Vector4::new(0.0, 0.0, 0.0, 0.0),
         }
     }
 }

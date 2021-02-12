@@ -61,7 +61,7 @@ impl ImRender for Camera {
 
             let mut front_arr = self.front.into();
             if imgui::InputFloat3::new(&ui, imgui::im_str!("Front"), &mut front_arr).build() {
-                self.pos = front_arr.into();
+                self.front = front_arr.into();
             }
 
             imgui::Slider::new(imgui::im_str!("FOV"))

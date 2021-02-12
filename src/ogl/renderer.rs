@@ -60,7 +60,7 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, scene: &Scene, aabb_program: &mut ShaderProgram) {
+    pub fn render(&mut self, scene: &Scene /*, aabb_program: &mut ShaderProgram*/) {
         self.front.bind();
         unsafe {
             gl::Viewport(0, 0, self.front.width, self.front.height);
@@ -159,7 +159,7 @@ impl Renderer {
                     }
                 } else {
                     unsafe {
-                        gl::Disable(gl::CULL_FACE);
+                        gl::Enable(gl::CULL_FACE);
                     }
                 }
 
@@ -173,8 +173,24 @@ impl Renderer {
                     main.set_uniform("material.has_base_tex", 0);
                 }
 
+                if let Some(emissive) = material.emissive_tex {
+                    main.set_uniform("material.emissive_tex", emissive as i32);
+                    main.set_uniform("material.emissive_factor", material.emissive_factor);
+                }
+
                 if let Some(normal_index) = material.normal {
                     main.set_uniform("material.normal", normal_index as i32);
+                }
+
+                if let Some(metal) = material.metallic_tex {
+                    main.set_uniform("material.metallic_tex", metal as i32);
+                    main.set_uniform("material.metallic", material.metallic);
+                    main.set_uniform("material.roughness", material.roughness);
+                }
+
+                if let Some(occlusion) = material.occlusion_tex {
+                    main.set_uniform("material.occlusion_tex", occlusion as i32);
+                    main.set_uniform("material.occlusion_str", material.occlusion_str);
                 }
             } else {
                 // shader.set_uniform("material.base_color", material.base_color);

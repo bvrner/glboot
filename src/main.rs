@@ -22,11 +22,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
     let shader_path = format!("{}/shaders/flattex.glsl", root);
+    // let shader_path = format!("{}/shaders/lightning/bump.glsl", root);
+    //let shader_path = format!("{}/shaders/lightning/pbr.glsl", root);
     // let shader_path = format!("{}/shaders/procedural/bricks.glsl", root);
     // let m_path = format!("{}/models/matilda/scene.gltf", root);
     // let m_path = format!("{}/models/back/scene.gltf", root);
     let m_path = format!("{}/models/fox/Fox.gltf", root);
-    // let m_path = format!("{}/models/tests/BoxAnimated.gltf", root);
+    // let m_path = format!("{}/models/tests/TwoSidedPlane.gltf", root);
+    //let m_path = format!("{}/models/tests/MetalRoughSpheres.gltf", root);
     // let m_path = format!("{}/models/tests/InterpolationTest.gltf", root);
     // let m_path = format!("{}/models/tests/SimpleSkin.gltf", root);
     // let m_path = format!("{}/models/tests/AnimatedTriangle.gltf", root);
@@ -88,8 +91,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // program.set_uniform("model", Matrix4::from_scale(0.1));
     }
 
-    let mut aabb_program =
-        ShaderProgram::from_sources(glboot::aabb::SOURCE_V, glboot::aabb::SOURCE_F, None)?;
+    // let mut aabb_program =
+    //     ShaderProgram::from_sources(glboot::aabb::SOURCE_V, glboot::aabb::SOURCE_F, None)?;
 
     let mut arc = ArcBall::new(1366.0, 713.0);
     let events = window.events.take().unwrap();
@@ -97,8 +100,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fps = 1.0 / 60.0;
     let mut last_time = window.glfw.get_time() as f32;
     let mut timer = last_time;
-    let mut updates: u32 = 0;
-    let mut frames: u32 = 0;
+    // let mut updates: u32 = 0;
+    // let mut frames: u32 = 0;
     let mut delta = 0.0;
 
     // let time = window.glfw.get_time() as f32;
@@ -109,7 +112,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if delta >= 1.0 {
             scene.borrow_mut().update(now - last_time);
             delta -= 1.0;
-            updates += 1;
+            // updates += 1;
         }
         last_time = now;
         // scene
@@ -126,8 +129,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // last_time = this_time;
         renderer
             .borrow_mut()
-            .render(&scene.borrow(), &mut aabb_program);
-        frames += 1;
+            .render(&scene.borrow() /*, &mut aabb_program*/);
+        // frames += 1;
         imgui.draw(&mut window);
 
         {
@@ -148,9 +151,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if window.glfw.get_time() as f32 - timer > 1.0 {
             timer += 1.0;
-            println!("FPS: {}", frames);
-            updates = 0;
-            frames = 0;
+            // println!("FPS: {}", frames);
+            // updates = 0;
+            // frames = 0;
         }
 
         for (_, event) in glfw::flush_messages(&events) {

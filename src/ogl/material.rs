@@ -1,17 +1,22 @@
-use cgmath::Vector4;
+use cgmath::{Vector3, Vector4};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Material {
     pub base_color: Vector4<f32>,
     pub base_tex: Option<usize>,
 
-    pub metallic: f32,
+    pub emissive_factor: Vector3<f32>,
+    pub emissive_tex: Option<usize>,
+
     pub roughness: f32,
+    pub metallic: f32,
     pub metallic_tex: Option<usize>,
 
-    pub normal: Option<usize>,
-    pub occlusion_tex: Option<usize>,
     pub occlusion_str: f32,
+    pub occlusion_tex: Option<usize>,
+
+    pub normal: Option<usize>,
+
     pub double_sided: bool,
 }
 
@@ -36,6 +41,8 @@ impl<'a> From<gltf::Material<'a>> for Material {
             .unwrap_or((None, 0.0));
 
         let double_sided = mat.double_sided();
+        let emissive_factor = mat.emissive_factor().into();
+        let emissive_tex = mat.emissive_texture().map(|em| em.texture().index());
 
         Self {
             base_color,
@@ -47,6 +54,8 @@ impl<'a> From<gltf::Material<'a>> for Material {
             occlusion_tex,
             occlusion_str,
             double_sided,
+            emissive_factor,
+            emissive_tex,
         }
     }
 }
@@ -63,6 +72,8 @@ impl Default for Material {
             occlusion_tex: None,
             occlusion_str: 1.0,
             double_sided: false,
+            emissive_factor: Vector3::new(0.0, 0.0, 0.0),
+            emissive_tex: None,
         }
     }
 }

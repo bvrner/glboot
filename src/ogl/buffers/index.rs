@@ -11,11 +11,11 @@ impl IndexBuffer {
 
             gl::GenBuffers(1, &mut buffer);
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, buffer);
-            gl::BufferData(
+            gl::BufferStorage(
                 gl::ELEMENT_ARRAY_BUFFER,
                 (data.len() * mem::size_of::<T>()) as GLsizeiptr,
                 data.as_ptr() as *const c_void,
-                gl::STATIC_DRAW,
+                0,
             );
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0);
             IndexBuffer(buffer)

@@ -11,11 +11,11 @@ impl VertexBuffer {
             gl::GenBuffers(1, &mut vbo);
 
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-            gl::BufferData(
+            gl::BufferStorage(
                 gl::ARRAY_BUFFER,
                 (data.len() * mem::size_of::<T>()) as GLsizeiptr,
                 data.as_ptr() as *const c_void,
-                gl::STATIC_DRAW,
+                0,
             );
 
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);

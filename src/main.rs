@@ -21,15 +21,16 @@ use glfw::{self, Action, Context, Key};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // shader and texture paths
     let root = format!("{}/assets", env!("CARGO_MANIFEST_DIR"));
-    let shader_path = format!("{}/shaders/flattex.glsl", root);
+    // let shader_path = format!("{}/shaders/flattex.glsl", root);
+    let shader_path = format!("{}/shaders/cartoon.glsl", root);
     // let shader_path = format!("{}/shaders/lightning/bump.glsl", root);
-    //let shader_path = format!("{}/shaders/lightning/pbr.glsl", root);
+    // let shader_path = format!("{}/shaders/lightning/pbr.glsl", root);
     // let shader_path = format!("{}/shaders/procedural/bricks.glsl", root);
     // let m_path = format!("{}/models/matilda/scene.gltf", root);
-    // let m_path = format!("{}/models/back/scene.gltf", root);
-    let m_path = format!("{}/models/fox/Fox.gltf", root);
+    let m_path = format!("{}/models/back/scene.gltf", root);
+    // let m_path = format!("{}/models/fox/Fox.gltf", root);
     // let m_path = format!("{}/models/tests/TwoSidedPlane.gltf", root);
-    //let m_path = format!("{}/models/tests/MetalRoughSpheres.gltf", root);
+    // let m_path = format!("{}/models/tests/MetalRoughSpheres.gltf", root);
     // let m_path = format!("{}/models/tests/InterpolationTest.gltf", root);
     // let m_path = format!("{}/models/tests/SimpleSkin.gltf", root);
     // let m_path = format!("{}/models/tests/AnimatedTriangle.gltf", root);
@@ -91,8 +92,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // program.set_uniform("model", Matrix4::from_scale(0.1));
     }
 
-    // let mut aabb_program =
-    //     ShaderProgram::from_sources(glboot::aabb::SOURCE_V, glboot::aabb::SOURCE_F, None)?;
+    let mut aabb_program =
+        ShaderProgram::from_sources(glboot::aabb::SOURCE_V, glboot::aabb::SOURCE_F, None)?;
 
     let mut arc = ArcBall::new(1366.0, 713.0);
     let events = window.events.take().unwrap();

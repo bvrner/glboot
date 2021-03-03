@@ -1,6 +1,6 @@
 use crate::{
     aabb::Aabb,
-    ogl::{buffers::*, material::Material, program::ShaderProgram, texture::Texture},
+    ogl::{buffers::*, material::Material, texture::Texture2D},
     ImRender,
 };
 use cgmath::{prelude::*, Matrix4, Quaternion, Vector3};
@@ -13,7 +13,6 @@ use super::{
 };
 
 // use rayon::prelude::*;
-use std::convert::TryFrom;
 use std::path::Path;
 
 #[derive(Debug)]
@@ -23,7 +22,7 @@ pub struct Scene {
     pub roots: Vec<usize>, // indices of the roots
 
     node_parent: Vec<(usize, Option<usize>)>, // (node, parent) indices for traversal
-    pub textures: Vec<Texture>,
+    pub textures: Vec<Texture2D>,
     pub materials: Vec<Material>,
     pub animations: Animations,
     pub skins: Vec<Skin>,
@@ -123,9 +122,7 @@ where
     assert_eq!(buffers.len(), document.buffers().count());
     assert_eq!(images.len(), document.images().count());
 
-    let textures: Result<Vec<Texture>, LoaderError> =
-        images.into_iter().map(Texture::try_from).collect();
-    let textures = textures?;
+    let textures: Vec<Texture2D> = images.into_iter().map(Texture2D::from).collect();
 
     let materials: Vec<Material> = document
         .materials()

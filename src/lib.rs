@@ -8,7 +8,6 @@ pub mod scene;
 use crate::core::ui::ImguiGLFW;
 use imgui::{Context, Ui};
 
-use ogl::program::ShaderProgram;
 use std::{cell::RefCell, rc::Rc};
 
 pub struct ImGUI {

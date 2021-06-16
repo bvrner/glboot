@@ -14,7 +14,7 @@ imgui = "0.6.1"
 imgui-opengl-renderer = "0.10.0"
 cgmath = "0.17.0"
 image = "0.23.13"
-rayon = "1.4.0"
+rayon = "1.5.1"
 gltf = "0.15"
 thiserror = "1.0.25"
 

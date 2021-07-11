@@ -40,6 +40,18 @@ pub struct Shader<const TYPE: GLenum> {
     pub(crate) id: GLuint,
 }
 
+// a small hack to generate a compiler time error when the enum isn't a valid shader type
+// again, when const generics gets better I'll be able to use a custom enum and avoid all that
+// this could be made a bit better if complex expressions where allowed in const generic contexts
+// so TODO consider using nightly to get that
+pub struct IsLegal<const T: GLenum> {}
+
+pub trait Truth {}
+
+impl Truth for IsLegal<{ gl::VERTEX_SHADER }> {}
+impl Truth for IsLegal<{ gl::FRAGMENT_SHADER }> {}
+impl Truth for IsLegal<{ gl::GEOMETRY_SHADER }> {}
+
 // #[derive(Copy, Clone, PartialEq, Eq)]
 // pub enum ShaderKind {
 //     Vertex = gl::VERTEX_SHADER as isize,
@@ -48,7 +60,10 @@ pub struct Shader<const TYPE: GLenum> {
 // }
 
 // TODO remove IO bound functions
-impl<const TYPE: GLenum> Shader<TYPE> {
+impl<const TYPE: GLenum> Shader<TYPE>
+where
+    IsLegal<TYPE>: Truth,
+{
     pub fn from_file<P: AsRef<Path>>(file: P) -> Result<Self, ShaderError> {
         let mut open_file = File::open(file)?;
         Self::from_reader(&mut open_file)
@@ -62,11 +77,6 @@ impl<const TYPE: GLenum> Shader<TYPE> {
     }
 
     pub fn from_source(source: &str) -> Result<Self, ShaderError> {
-        // this should be a compile time error, but it's not currently possible
-        // to use const generics in complex expressions on stable
-        // so TODO consider migrating to nightly
-        assert!(is_valid::<TYPE>());
-
         unsafe {
             let shader = gl::CreateShader(TYPE);
             let source = CString::new(source)?;
@@ -100,9 +110,9 @@ impl<const TYPE: GLenum> Shader<TYPE> {
     }
 }
 
-const fn is_valid<const T: GLenum>() -> bool {
-    T == gl::VERTEX_SHADER || T == gl::FRAGMENT_SHADER || T == gl::GEOMETRY_SHADER
-}
+// const fn is_valid<const T: GLenum>() -> bool {
+//     T == gl::VERTEX_SHADER || T == gl::FRAGMENT_SHADER || T == gl::GEOMETRY_SHADER
+// }
 
 impl<const TYPE: GLenum> Drop for Shader<TYPE> {
     fn drop(&mut self) {

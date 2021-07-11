@@ -1,4 +1,4 @@
-use super::shaders::{Shader, ShaderError, ShaderKind};
+use super::shaders::{FragShader, GeoShader, ShaderError, VertexShader};
 use std::{collections::HashMap, ffi::CString, fs::File, io::Read, path::Path, ptr};
 
 use gl::types::*;
@@ -41,8 +41,8 @@ impl ShaderProgram {
         _g_source: Option<&str>,
     ) -> Result<Self, ShaderError> {
         let (v, f) = (
-            Shader::from_source(v_source, ShaderKind::Vertex)?,
-            Shader::from_source(f_source, ShaderKind::Fragment)?,
+            VertexShader::from_source(v_source)?,
+            FragShader::from_source(f_source)?,
         );
 
         Self::from_shaders(v, f, None)
@@ -54,8 +54,8 @@ impl ShaderProgram {
         _g_path: Option<P>,
     ) -> Result<Self, ShaderError> {
         let (v, f) = (
-            Shader::from_file(v_path, ShaderKind::Vertex)?,
-            Shader::from_file(f_path, ShaderKind::Fragment)?,
+            VertexShader::from_file(v_path)?,
+            FragShader::from_file(f_path)?,
         );
 
         Self::from_shaders(v, f, None)
@@ -67,24 +67,24 @@ impl ShaderProgram {
         _g_reader: R,
     ) -> Result<Self, ShaderError> {
         let (v, f) = (
-            Shader::from_reader(v_reader, ShaderKind::Vertex)?,
-            Shader::from_reader(f_reader, ShaderKind::Fragment)?,
+            VertexShader::from_reader(v_reader)?,
+            FragShader::from_reader(f_reader)?,
         );
 
         Self::from_shaders(v, f, None)
     }
 
     pub fn from_shaders(
-        vertex: Shader,
-        frag: Shader,
-        geo: Option<Shader>,
+        vertex: VertexShader,
+        frag: FragShader,
+        geo: Option<GeoShader>,
     ) -> Result<Self, ShaderError> {
         unsafe {
             let program = gl::CreateProgram();
-            gl::AttachShader(program, vertex.0);
-            gl::AttachShader(program, frag.0);
+            gl::AttachShader(program, vertex.id);
+            gl::AttachShader(program, frag.id);
             if let Some(ref geo) = geo {
-                gl::AttachShader(program, geo.0);
+                gl::AttachShader(program, geo.id);
             }
 
             gl::LinkProgram(program);
@@ -95,11 +95,11 @@ impl ShaderProgram {
 
             check_program_status(program, gl::VALIDATE_STATUS)?;
 
-            gl::DetachShader(program, vertex.0);
-            gl::DetachShader(program, frag.0);
+            gl::DetachShader(program, vertex.id);
+            gl::DetachShader(program, frag.id);
 
             if let Some(ref geo) = geo {
-                gl::DetachShader(program, geo.0);
+                gl::DetachShader(program, geo.id);
             }
             Ok(ShaderProgram(program, HashMap::new()))
         }
@@ -178,7 +178,7 @@ fn check_program_status(program: GLuint, which: GLenum) -> Result<(), ShaderErro
 
 // this works but it's kinda slow, TODO optmize and properly deal with errors
 // considering using the glsl crate to properly parse the source
-fn process_all(src: String) -> Result<(Shader, Shader, Option<Shader>), ShaderError> {
+fn process_all(src: String) -> Result<(VertexShader, FragShader, Option<GeoShader>), ShaderError> {
     const V_BEGIN_MARK: &str = "#begin vertex";
     const F_BEGIN_MARK: &str = "#begin fragment";
     const G_BEGIN_MARK: &str = "#begin geometry";
@@ -199,21 +199,14 @@ fn process_all(src: String) -> Result<(Shader, Shader, Option<Shader>), ShaderEr
     let f_begin = opt_to_result(f_begin, "No begin point for fragment shader".to_owned())?;
     let f_end = opt_to_result(f_end, "No end point for fragment shader".to_owned())?;
 
-    let v_shader = Shader::from_source(
-        &src[(v_begin + V_BEGIN_MARK.len())..v_end],
-        ShaderKind::Vertex,
-    )?;
-    let f_shader = Shader::from_source(
-        &src[(f_begin + F_BEGIN_MARK.len())..f_end],
-        ShaderKind::Fragment,
-    )?;
+    let v_shader = VertexShader::from_source(&src[(v_begin + V_BEGIN_MARK.len())..v_end])?;
+    let f_shader = FragShader::from_source(&src[(f_begin + F_BEGIN_MARK.len())..f_end])?;
 
     // oh god is that ugly
     // I could use Option's `zip` to make it more readable but I don't want to go to nightly
     let g_shader = match geometry {
-        (Some(begin), Some(end)) => Some(Shader::from_source(
+        (Some(begin), Some(end)) => Some(GeoShader::from_source(
             &src[(begin + G_BEGIN_MARK.len()..end)],
-            ShaderKind::Geometry,
         )?),
         (None, None) => None,
         (None, _) => {

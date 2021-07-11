@@ -13,47 +13,62 @@ use thiserror::Error;
 pub enum ShaderError {
     #[error("shader compiler error: {0}")]
     CompilationError(String),
-    #[error("shader source code error: {0}")]
-    SourceError(String),
+    #[error("error on FFI: {0}")]
+    FfiError(#[from] ffi::NulError),
     #[error("shader io error")]
     IoError(#[from] io::Error),
+    #[error("shader source error: {0}")]
+    SourceError(String),
     #[error("shader error: {0}")]
     Other(String),
 }
 
-impl From<ffi::NulError> for ShaderError {
-    #[inline]
-    fn from(err: ffi::NulError) -> ShaderError {
-        ShaderError::SourceError(err.to_string())
-    }
-}
+// impl From<ffi::NulError> for ShaderError {
+//     #[inline]
+//     fn from(err: ffi::NulError) -> ShaderError {
+//         ShaderError::SourceError(err.to_string())
+//     }
+// }
 
+pub type VertexShader = Shader<{ gl::VERTEX_SHADER }>;
+pub type FragShader = Shader<{ gl::FRAGMENT_SHADER }>;
+pub type GeoShader = Shader<{ gl::GEOMETRY_SHADER }>;
+
+// once more const generics features hit the parameter will be an enum
 #[derive(Debug)]
-pub struct Shader(pub(crate) GLuint);
-
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub enum ShaderKind {
-    Vertex = gl::VERTEX_SHADER as isize,
-    Fragment = gl::FRAGMENT_SHADER as isize,
-    Geometry = gl::GEOMETRY_SHADER as isize,
+pub struct Shader<const TYPE: GLenum> {
+    pub(crate) id: GLuint,
 }
 
-impl Shader {
-    pub fn from_file<P: AsRef<Path>>(file: P, kind: ShaderKind) -> Result<Self, ShaderError> {
+// #[derive(Copy, Clone, PartialEq, Eq)]
+// pub enum ShaderKind {
+//     Vertex = gl::VERTEX_SHADER as isize,
+//     Fragment = gl::FRAGMENT_SHADER as isize,
+//     Geometry = gl::GEOMETRY_SHADER as isize,
+// }
+
+// TODO remove IO bound functions
+impl<const TYPE: GLenum> Shader<TYPE> {
+    pub fn from_file<P: AsRef<Path>>(file: P) -> Result<Self, ShaderError> {
         let mut open_file = File::open(file)?;
-        Self::from_reader(&mut open_file, kind)
+        Self::from_reader(&mut open_file)
     }
 
-    pub fn from_reader<R: Read>(source: &mut R, kind: ShaderKind) -> Result<Self, ShaderError> {
+    pub fn from_reader<R: Read>(source: &mut R) -> Result<Self, ShaderError> {
         let mut shadersrc = String::new();
 
         source.read_to_string(&mut shadersrc)?;
-        Self::from_source(&shadersrc, kind)
+        Self::from_source(&shadersrc)
     }
 
-    pub fn from_source(source: &str, kind: ShaderKind) -> Result<Self, ShaderError> {
+    pub fn from_source(source: &str) -> Result<Self, ShaderError> {
+        // this should be a compile time error, but it's not currently possible
+        // to use const generics in complex expressions on stable
+        // so TODO consider migrating to nightly
+        assert!(is_valid::<TYPE>());
+
         unsafe {
-            let shader = gl::CreateShader(kind as GLenum);
+            let shader = gl::CreateShader(TYPE);
             let source = CString::new(source)?;
 
             gl::ShaderSource(shader, 1, &source.as_ptr(), ptr::null());
@@ -79,14 +94,18 @@ impl Shader {
                 let info_log = String::from_utf8_unchecked(info_log);
                 Err(ShaderError::CompilationError(info_log))
             } else {
-                Ok(Shader(shader))
+                Ok(Shader { id: shader })
             }
         }
     }
 }
 
-impl Drop for Shader {
+const fn is_valid<const T: GLenum>() -> bool {
+    T == gl::VERTEX_SHADER || T == gl::FRAGMENT_SHADER || T == gl::GEOMETRY_SHADER
+}
+
+impl<const TYPE: GLenum> Drop for Shader<TYPE> {
     fn drop(&mut self) {
-        unsafe { gl::DeleteShader(self.0) };
+        unsafe { gl::DeleteShader(self.id) };
     }
 }

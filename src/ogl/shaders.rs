@@ -36,7 +36,10 @@ pub type GeoShader = Shader<{ gl::GEOMETRY_SHADER }>;
 
 // once more const generics features hit the parameter will be an enum
 #[derive(Debug)]
-pub struct Shader<const TYPE: GLenum> {
+pub struct Shader<const TYPE: GLenum>
+where
+    IsLegal<TYPE>: Truth,
+{
     pub(crate) id: GLuint,
 }
 
@@ -48,6 +51,8 @@ pub struct IsLegal<const T: GLenum> {}
 
 pub trait Truth {}
 
+// TODO Tesselations shaders?
+// TODO also allow shader bits so that this abstraction can also bbe used with separate shader stages
 impl Truth for IsLegal<{ gl::VERTEX_SHADER }> {}
 impl Truth for IsLegal<{ gl::FRAGMENT_SHADER }> {}
 impl Truth for IsLegal<{ gl::GEOMETRY_SHADER }> {}
@@ -110,11 +115,10 @@ where
     }
 }
 
-// const fn is_valid<const T: GLenum>() -> bool {
-//     T == gl::VERTEX_SHADER || T == gl::FRAGMENT_SHADER || T == gl::GEOMETRY_SHADER
-// }
-
-impl<const TYPE: GLenum> Drop for Shader<TYPE> {
+impl<const TYPE: GLenum> Drop for Shader<TYPE>
+where
+    IsLegal<TYPE>: Truth,
+{
     fn drop(&mut self) {
         unsafe { gl::DeleteShader(self.id) };
     }

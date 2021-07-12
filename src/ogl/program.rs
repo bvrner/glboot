@@ -3,8 +3,7 @@ use std::{collections::HashMap, ffi::CString, fs::File, io::Read, path::Path, pt
 
 use gl::types::*;
 
-use cgmath::prelude::*;
-use cgmath::{Array, Matrix2, Matrix3, Matrix4, Vector2, Vector3, Vector4};
+use cgmath::{prelude::*, Array, Matrix2, Matrix3, Matrix4, Vector2, Vector3, Vector4};
 
 #[derive(Debug)]
 pub struct ShaderProgram(pub GLuint, HashMap<GLint, Uniform>);

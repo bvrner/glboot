@@ -19,7 +19,7 @@ gltf = "0.16"
 thiserror = "1.0.26"
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = "0.4"
 
 [[bench]]
 name = "models_bench"

@@ -9,7 +9,7 @@ license = "Apache-2.0"
 
 [dependencies]
 gl = "0.14.0"
-glfw = "0.41.0"
+glfw = "0.49.1"
 imgui = "0.6.1"
 imgui-opengl-renderer = "0.10.0"
 cgmath = "0.17.0"
